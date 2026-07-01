@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Teacher-App",
+    "name": "BoloBuddy",
     "slug": "Teacher-App",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -34,7 +34,14 @@
             "imageWidth": 76
           }
         }
-      ]
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Allow BoloBuddy to use the microphone so you can practise speaking English."
+        }
+      ],
+      "expo-localization"
     ],
     "experiments": {
       "typedRoutes": true,

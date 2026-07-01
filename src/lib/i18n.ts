@@ -1,0 +1,94 @@
+import { getLocales } from "expo-localization";
+import i18n from "i18next";
+import { initReactI18next } from "react-i18next";
+
+// English-first. To add Hindi etc. later: drop in a new resource block and the
+// matching Sarvam language code — no screen changes needed.
+const resources = {
+  en: {
+    translation: {
+      appName: "BoloBuddy",
+      tagline: "Your friendly English-speaking buddy",
+
+      onboarding: {
+        title: "Let's get to know you!",
+        namePlaceholder: "Your name",
+        gradeLabel: "Which class are you in? (optional)",
+        levelLabel: "How comfortable are you with English?",
+        levelBeginner: "Just starting",
+        levelIntermediate: "I can manage",
+        levelAdvanced: "Quite confident",
+        interestsLabel: "What do you love? (pick a few)",
+        start: "Start learning",
+      },
+
+      home: {
+        greeting: "Hi {{name}}! 👋",
+        prompt: "Ready to talk in English?",
+        startTalking: "Free chat",
+        lessons: "Lessons",
+        settings: "Settings",
+        streak: "day streak",
+        xp: "XP",
+        lessonsDone: "lessons",
+      },
+
+      lessons: {
+        title: "Choose a lesson",
+        subtitle: "Pick something to practise",
+        loading: "Loading lessons…",
+        error: "Couldn't load lessons. Is the server running?",
+        retry: "Try again",
+        completed: "Done ✓",
+      },
+
+      conversation: {
+        tapToSpeak: "Hold to speak",
+        listening: "Listening…",
+        thinking: "Thinking…",
+        speaking: "Speaking…",
+        idle: "Hold the mic and say hello!",
+        typeInstead: "Type instead",
+        send: "Send",
+        back: "Back",
+        finish: "Finish lesson",
+        freeChat: "Free chat",
+        wellDone: "Well done! 🎉",
+        completedXp: "+{{xp}} XP",
+      },
+
+      settings: {
+        title: "Settings",
+        language: "Language",
+        comingSoon: "More languages coming soon",
+        clearHistory: "Clear conversation",
+        editProfile: "Edit profile",
+        reset: "Reset everything",
+      },
+
+      interests: {
+        cricket: "Cricket",
+        space: "Space",
+        animals: "Animals",
+        stories: "Stories",
+        music: "Music",
+        science: "Science",
+        movies: "Movies",
+        food: "Food",
+        games: "Games",
+        nature: "Nature",
+      },
+    },
+  },
+};
+
+const device = getLocales()[0]?.languageCode ?? "en";
+
+i18n.use(initReactI18next).init({
+  resources,
+  lng: resources[device as keyof typeof resources] ? device : "en",
+  fallbackLng: "en",
+  interpolation: { escapeValue: false },
+});
+
+export default i18n;
