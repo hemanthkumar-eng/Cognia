@@ -1,12 +1,8 @@
 import { Hono } from "hono";
-import { buildSystemPrompt } from "../prompt.js";
 import { getScenario } from "../scenarios.js";
-import { chat, speechToText, textToSpeech, toMessages } from "../sarvam.js";
-import type { ChatTurn, ConverseResponse, Profile } from "../types.js";
-
-// In-memory conversation store keyed by sessionId.
-// Phase 2 swaps this for Supabase so history survives restarts.
-const sessions = new Map<string, ChatTurn[]>();
+import { speechToText } from "../sarvam.js";
+import { clearSession, runTutorTurn } from "../tutor.js";
+import type { ConverseResponse, Profile } from "../types.js";
 
 export const converse = new Hono();
 
@@ -16,8 +12,14 @@ export const converse = new Hono();
  *   - profile: JSON-stringified Profile
  *   - sessionId: string (stable per conversation)
  *   - text:    optional — text fallback instead of audio (noisy/low-bandwidth)
+ *   - opening: optional "true" — tutor speaks first, no student input
+ *   - scenarioId: optional active lesson
  *
  * Returns ConverseResponse: { userText, replyText, audioBase64, mascotState }.
+ *
+ * This is the turn-based path (record → upload → STT → LLM → TTS). The streaming
+ * path (/api/stream) does the same tutor turn but with live STT over WebSocket;
+ * both share runTutorTurn() so history and behaviour stay identical.
  */
 converse.post("/", async (c) => {
   let body: FormData;
@@ -41,18 +43,9 @@ converse.post("/", async (c) => {
   const opening = String(body.get("opening") || "") === "true";
 
   try {
-    const history = sessions.get(sessionId) ?? [];
-
-    // 1. Decide what the student "said".
-    //    - opening turn: no input; we seed a hidden kickoff so the tutor speaks first.
-    //    - otherwise: from STT, or the text fallback.
-    let userText = "";
-    if (opening) {
-      const kickoff =
-        scenario?.kickoff ??
-        "Greet the student warmly by name and ask what they would like to talk about today.";
-      history.push({ role: "user", content: `(${kickoff})` });
-    } else {
+    // Decide what the student "said": opening turn (none), text fallback, or STT.
+    let userText: string | undefined;
+    if (!opening) {
       userText = String(body.get("text") || "").trim();
       if (!userText) {
         const audio = body.get("audio");
@@ -65,22 +58,14 @@ converse.post("/", async (c) => {
       if (!userText) {
         return c.json({ error: "Could not hear anything. Please try again." }, 422);
       }
-      history.push({ role: "user", content: userText });
     }
 
-    // 2. LLM reply with personalized + scenario-aware system prompt + history.
-    const messages = toMessages(buildSystemPrompt(profile, scenario), history);
-    const replyText = await chat(messages);
-    history.push({ role: "assistant", content: replyText });
-    sessions.set(sessionId, history);
-
-    // 3. Speak the reply.
-    const audioBase64 = await textToSpeech(replyText, language);
+    const turn = await runTutorTurn({ sessionId, profile, scenario, userText, opening });
 
     const payload: ConverseResponse = {
-      userText,
-      replyText,
-      audioBase64,
+      userText: turn.userText,
+      replyText: turn.replyText,
+      audioBase64: turn.audioBase64,
       mascotState: "speaking",
     };
     return c.json(payload);
@@ -93,6 +78,6 @@ converse.post("/", async (c) => {
 
 // Lets the app start a fresh conversation (e.g. "clear history" in Settings).
 converse.delete("/:sessionId", (c) => {
-  sessions.delete(c.req.param("sessionId"));
+  clearSession(c.req.param("sessionId"));
   return c.json({ ok: true });
 });

@@ -1,4 +1,4 @@
-// Shared types for the BoloBuddy backend.
+// Shared types for the Cognia backend.
 // Kept in sync (by hand) with the app's lib/api.ts.
 
 export type Level = "beginner" | "intermediate" | "advanced";

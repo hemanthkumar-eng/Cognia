@@ -1,9 +1,9 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 import { Animated, Easing, StyleSheet, Text, View } from "react-native";
 import { Brand } from "@/lib/ui";
 import type { MascotState } from "@/lib/types";
 
-// Buddy, the BoloBuddy owl. For the MVP scaffold this is a pure-Animated
+// The Cognia owl mascot. For the MVP scaffold this is a pure-Animated
 // placeholder so the app runs with zero extra assets. To get the Duolingo feel,
 // swap this for a Lottie animation (lottie-react-native is already installed):
 //   <LottieView source={require('@/assets/mascot.json')} autoPlay loop />
@@ -27,8 +27,8 @@ const RING_COLOR: Record<MascotState, string> = {
 };
 
 export function Mascot({ state, size = 140 }: { state: MascotState; size?: number }) {
-  const bob = useRef(new Animated.Value(0)).current;
-  const pulse = useRef(new Animated.Value(0)).current;
+  const [bob] = useState(() => new Animated.Value(0));
+  const [pulse] = useState(() => new Animated.Value(0));
 
   // Gentle idle bob — always running.
   useEffect(() => {

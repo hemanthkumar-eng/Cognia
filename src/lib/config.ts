@@ -15,3 +15,12 @@ const fallback = Platform.select({
 });
 
 export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? fallback;
+
+// Real-time streaming voice (Phase 2). Off by default so the stable turn-based
+// path stays the default until streaming is validated on a device + live key.
+// Enable with EXPO_PUBLIC_STREAMING=1 in the project .env.
+export const STREAMING_ENABLED = process.env.EXPO_PUBLIC_STREAMING === "1";
+
+// WebSocket URL for the streaming bridge, derived from API_URL
+// (http→ws, https→wss). e.g. http://10.0.2.2:3000 → ws://10.0.2.2:3000/api/stream
+export const WS_URL = `${API_URL.replace(/^http/, "ws")}/api/stream`;

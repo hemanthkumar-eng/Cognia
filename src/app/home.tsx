@@ -18,7 +18,13 @@ export default function Home() {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.push("/settings")} hitSlop={12}>
+        <Pressable
+          onPress={() => router.push("/settings")}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel={t("home.settings")}
+          style={({ pressed }) => pressed && styles.pressed}
+        >
           <ThemedText style={styles.gear}>⚙️</ThemedText>
         </Pressable>
       </View>
@@ -44,13 +50,17 @@ export default function Home() {
 
       <View style={styles.actions}>
         <Pressable
-          style={styles.primary}
+          accessibilityRole="button"
+          accessibilityLabel={t("home.lessons")}
+          style={({ pressed }) => [styles.primary, pressed && styles.pressed]}
           onPress={() => router.push("/lessons")}
         >
           <ThemedText style={styles.primaryText}>📚 {t("home.lessons")}</ThemedText>
         </Pressable>
         <Pressable
-          style={styles.secondary}
+          accessibilityRole="button"
+          accessibilityLabel={t("home.startTalking")}
+          style={({ pressed }) => [styles.secondary, pressed && styles.pressed]}
           onPress={() => router.push("/conversation")}
         >
           <ThemedText style={styles.secondaryText}>
@@ -100,4 +110,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   secondaryText: { color: Brand.primaryDark, fontSize: 18, fontWeight: "700" },
+  pressed: { opacity: 0.7, transform: [{ scale: 0.97 }] },
 });

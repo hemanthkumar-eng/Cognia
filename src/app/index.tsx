@@ -6,6 +6,7 @@ import { Brand } from "@/lib/ui";
 // Entry point: wait for persisted state, then route to onboarding or home.
 export default function Index() {
   const hydrated = useAppStore((s) => s.hydrated);
+  const authed = useAppStore((s) => s.authed);
   const onboarded = useAppStore((s) => s.onboarded);
 
   if (!hydrated) {
@@ -16,6 +17,9 @@ export default function Index() {
     );
   }
 
+  // New user → sign up → profile setup → home. (Already-onboarded users from
+  // before auth existed skip straight to home.)
+  if (!authed && !onboarded) return <Redirect href="/signup" />;
   return <Redirect href={onboarded ? "/home" : "/onboarding"} />;
 }
 

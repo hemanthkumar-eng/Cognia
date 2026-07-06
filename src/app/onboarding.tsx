@@ -112,7 +112,12 @@ export default function Onboarding() {
           ))}
         </View>
 
-        <Pressable style={styles.cta} onPress={onStart}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t("onboarding.start")}
+          style={({ pressed }) => [styles.cta, pressed && styles.pressed]}
+          onPress={onStart}
+        >
           <ThemedText style={styles.ctaText}>{t("onboarding.start")}</ThemedText>
         </Pressable>
       </ScrollView>
@@ -132,7 +137,13 @@ function Chip({
   return (
     <Pressable
       onPress={onPress}
-      style={[styles.chip, selected && styles.chipSelected]}
+      accessibilityRole="button"
+      accessibilityState={{ selected }}
+      style={({ pressed }) => [
+        styles.chip,
+        selected && styles.chipSelected,
+        pressed && styles.pressed,
+      ]}
     >
       <ThemedText style={selected ? styles.chipTextSelected : undefined}>
         {label}
@@ -176,4 +187,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   ctaText: { color: "#ffffff", fontSize: 18, fontWeight: "700" },
+  pressed: { opacity: 0.75, transform: [{ scale: 0.97 }] },
 });

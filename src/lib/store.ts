@@ -29,6 +29,7 @@ const DEFAULT_PROGRESS: Progress = {
 
 interface AppState {
   profile: Profile;
+  authed: boolean; // signed in (placeholder until Supabase auth lands)
   onboarded: boolean;
   sessionId: string;
   messages: Message[];
@@ -36,6 +37,7 @@ interface AppState {
   hydrated: boolean; // persist finished loading from disk
 
   setProfile: (p: Profile) => void;
+  completeAuth: () => void;
   completeOnboarding: (p: Profile) => void;
   addMessage: (m: Message) => void;
   resetConversation: () => string; // returns the old sessionId (to clear server-side)
@@ -48,6 +50,7 @@ export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
       profile: DEFAULT_PROFILE,
+      authed: false,
       onboarded: false,
       sessionId: newSessionId(),
       messages: [],
@@ -55,6 +58,7 @@ export const useAppStore = create<AppState>()(
       hydrated: false,
 
       setProfile: (profile) => set({ profile }),
+      completeAuth: () => set({ authed: true }),
       completeOnboarding: (profile) => set({ profile, onboarded: true }),
       addMessage: (m) => set({ messages: [...get().messages, m] }),
       resetConversation: () => {
@@ -92,6 +96,7 @@ export const useAppStore = create<AppState>()(
       resetAll: () =>
         set({
           profile: DEFAULT_PROFILE,
+          authed: false,
           onboarded: false,
           messages: [],
           sessionId: newSessionId(),
@@ -99,10 +104,11 @@ export const useAppStore = create<AppState>()(
         }),
     }),
     {
-      name: "bolobuddy-store",
+      name: "cognia-store",
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (s) => ({
         profile: s.profile,
+        authed: s.authed,
         onboarded: s.onboarded,
         sessionId: s.sessionId,
         progress: s.progress,

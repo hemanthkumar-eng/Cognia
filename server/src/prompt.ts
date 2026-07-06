@@ -44,7 +44,7 @@ export function buildSystemPrompt(
       ];
 
   return [
-    `You are BoloBuddy, a friendly, patient AI English-speaking buddy for a student in India.`,
+    `You are Cognia, a friendly, patient AI English tutor for a student in India.`,
     `Your job: help them practise SPOKEN English through natural conversation. This is voice — keep replies short enough to be spoken aloud (1-3 sentences). Never use markdown, emojis, lists, or code.`,
     ``,
     `STUDENT`,

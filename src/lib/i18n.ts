@@ -7,8 +7,26 @@ import { initReactI18next } from "react-i18next";
 const resources = {
   en: {
     translation: {
-      appName: "BoloBuddy",
+      appName: "Cognia",
       tagline: "Your friendly English-speaking buddy",
+
+      auth: {
+        createTitle: "Create your account",
+        subtitle: "Practise spoken English with a personal AI tutor.",
+        continueGoogle: "Continue with Google",
+        continueApple: "Continue with Apple",
+        or: "or",
+        email: "Email",
+        emailPlaceholder: "you@example.com",
+        password: "Password",
+        passwordPlaceholder: "At least 8 characters",
+        show: "Show",
+        hide: "Hide",
+        createCta: "Create account",
+        terms: "By continuing, you agree to our Terms and Privacy Policy.",
+        haveAccount: "Already have an account?",
+        login: "Log in",
+      },
 
       onboarding: {
         title: "Let's get to know you!",

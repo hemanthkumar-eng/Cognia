@@ -1,4 +1,4 @@
-# BoloBuddy 🦉
+# Cognia
 
 An India-first, **English-speaking practice buddy** for students. A Duolingo-style
 mascot talks with the student by **voice**: the app speaks (TTS), listens to the
@@ -140,10 +140,47 @@ cd server && npx tsc --noEmit
 - **Phase 0 (done):** runnable skeleton, push-to-talk voice loop.
 - **Phase 1 (done):** scenario-aware tutor prompts, guided lessons (tutor opens
   the conversation), streaks/XP/lesson completion.
-- **Phase 2:** WebSocket **streaming** (partial captions, barge-in) via
-  `expo-audio-stream` ↔ Sarvam streaming STT; Supabase auth/profiles/progress;
-  Rive mascot.
+- **Phase 2 (in progress):** WebSocket **streaming** voice — live captions +
+  lower-latency replies (see below). Still to come: Supabase auth/profiles/
+  progress; Rive mascot; echo-cancelled barge-in.
 - **Phase 3:** Hindi + regional languages, pronunciation scoring, store release.
+
+---
+
+## Real-time streaming voice (Phase 2, behind a flag)
+
+A second voice path streams mic audio live instead of record-then-upload:
+
+```
+[app] --PCM (WebSocket)--> [server /api/stream] --> Sarvam streaming STT
+   ^                                                       |
+   |  live captions + reply text + reply audio  <----------+  (LLM + TTS)
+```
+
+- **On device:** `@siteed/audio-studio` captures 16 kHz mono PCM16 and forwards
+  base64 chunks over a WebSocket to our server (`src/lib/streaming.ts`).
+- **On server:** `server/src/stream.ts` bridges each utterance to Sarvam's STT
+  WebSocket (`server/src/sarvam-stream.ts`), relays live transcript segments back
+  as captions, then runs the **same** `runTutorTurn()` (LLM + TTS) as the REST
+  path — so history stays consistent whether a turn came in by stream, upload, or
+  the text box.
+- **Enable it:** set `EXPO_PUBLIC_STREAMING=1` (app `.env`) and rebuild the dev
+  client (native module — not Expo Go). Off by default; the turn-based path stays
+  the stable default.
+
+**Needs on-device + live-key validation** (built to spec, not yet run against a
+real Sarvam key):
+1. Sarvam streaming STT emits per-utterance (VAD-driven) segments, not word-by-
+   word partials — confirm caption cadence feels live enough. (`sarvam-stream.ts`)
+2. The per-chunk `audio.encoding` value for raw PCM input is unverified; override
+   `SARVAM_STT_AUDIO_ENCODING` if transcripts come back empty/garbled.
+3. **Barge-in** (interrupt the tutor mid-reply) needs acoustic echo cancellation
+   so the mic doesn't hear the tutor's own audio. The current push-to-talk model
+   sidesteps this (mic is closed while the tutor speaks); true full-duplex
+   barge-in is a follow-up (validate `@mykin-ai/expo-audio-stream`'s AEC path or
+   native config on a dev build first).
+4. Streaming **TTS** exists on Sarvam too; this increment streams STT and plays
+   the reply as one batch WAV. Chunked TTS playback is the next latency win.
 
 ## Notes & compliance
 

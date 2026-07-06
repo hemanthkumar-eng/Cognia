@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -19,6 +19,8 @@ import { Transcript } from "@/components/Transcript";
 import { Spacing } from "@/constants/theme";
 import { converse } from "@/lib/api";
 import { playBase64Wav, useVoiceRecorder } from "@/lib/audio";
+import { STREAMING_ENABLED } from "@/lib/config";
+import { useStreamingSession, type StreamHandlers } from "@/lib/streaming";
 import { useAppStore } from "@/lib/store";
 import type { MascotState } from "@/lib/types";
 import { Brand, Radius } from "@/lib/ui";
@@ -50,8 +52,26 @@ export default function Conversation() {
   const [error, setError] = useState<string | null>(null);
   const [showText, setShowText] = useState(false);
   const [draft, setDraft] = useState("");
+  const [partial, setPartial] = useState(""); // live STT caption (streaming mode)
   const disposeRef = useRef<(() => void) | null>(null);
+  const expectingOpeningRef = useRef(false); // skip XP for the tutor's opening line
+  const lastReplyRef = useRef(""); // reply text, for playback duration
 
+  // Play a base64 WAV reply and cycle the mascot speaking → idle. Shared by the
+  // turn-based mutation and the streaming session.
+  const playReply = useCallback(async (base64: string, replyText: string) => {
+    try {
+      disposeRef.current?.();
+      disposeRef.current = await playBase64Wav(base64);
+      setMascot("speaking");
+      const ms = Math.min(12000, 1500 + replyText.length * 60);
+      setTimeout(() => setMascot("idle"), ms);
+    } catch {
+      setMascot("idle");
+    }
+  }, []);
+
+  // --- Turn-based path (record → upload → STT/LLM/TTS) ---
   const mutation = useMutation({
     // Read sessionId/profile fresh so a reset right before an opening turn is honoured.
     mutationFn: (input: TurnInput) => {
@@ -68,15 +88,7 @@ export default function Conversation() {
       }
       addMessage({ id: nextId(), speaker: "tutor", text: res.replyText });
       if (!variables.opening) recordActivity(TURN_XP);
-      try {
-        disposeRef.current?.();
-        disposeRef.current = await playBase64Wav(res.audioBase64);
-        setMascot("speaking");
-        const ms = Math.min(12000, 1500 + res.replyText.length * 60);
-        setTimeout(() => setMascot("idle"), ms);
-      } catch {
-        setMascot("idle");
-      }
+      await playReply(res.audioBase64, res.replyText);
     },
     onError: (err: unknown) => {
       setMascot("idle");
@@ -84,17 +96,53 @@ export default function Conversation() {
     },
   });
 
+  // --- Streaming path (live PCM → WebSocket → live captions) ---
+  const streamHandlers = useMemo<StreamHandlers>(
+    () => ({
+      onPartial: (text) => setPartial(text),
+      onFinal: (text) => {
+        setPartial("");
+        if (text) addMessage({ id: nextId(), speaker: "user", text });
+      },
+      onReply: (text) => {
+        lastReplyRef.current = text;
+        addMessage({ id: nextId(), speaker: "tutor", text });
+        if (expectingOpeningRef.current) expectingOpeningRef.current = false;
+        else recordActivity(TURN_XP);
+      },
+      onAudio: (base64) => {
+        void playReply(base64, lastReplyRef.current);
+      },
+      onState: (state) => setMascot(state),
+      onError: (message) => {
+        setPartial("");
+        setMascot("idle");
+        setError(message);
+      },
+    }),
+    [addMessage, recordActivity, playReply],
+  );
+  const stream = useStreamingSession(streamHandlers);
+
   // Kick off the conversation. For a lesson we start fresh; the tutor speaks first.
   const startedRef = useRef(false);
   useEffect(() => {
     if (startedRef.current) return;
     startedRef.current = true;
-    if (scenarioId) {
-      resetConversation();
-      mutation.mutate({ opening: true });
-    } else if (messages.length === 0) {
+
+    const opening = scenarioId ? true : messages.length === 0;
+    if (scenarioId) resetConversation();
+
+    if (STREAMING_ENABLED) {
+      if (opening) expectingOpeningRef.current = true;
+      const { sessionId, profile } = useAppStore.getState();
+      stream.connect({ sessionId, profile, scenarioId, opening }).catch((e) => {
+        setError(e instanceof Error ? e.message : "Could not connect to the tutor.");
+      });
+    } else if (opening) {
       mutation.mutate({ opening: true });
     }
+
     return () => disposeRef.current?.();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -102,8 +150,10 @@ export default function Conversation() {
   async function handleStart() {
     try {
       setError(null);
+      setPartial("");
       setMascot("listening");
-      await recorder.start();
+      if (STREAMING_ENABLED) await stream.startTurn();
+      else await recorder.start();
     } catch (e) {
       setMascot("idle");
       setError(e instanceof Error ? e.message : "Could not start recording.");
@@ -112,6 +162,11 @@ export default function Conversation() {
 
   async function handleStop() {
     try {
+      if (STREAMING_ENABLED) {
+        setMascot("thinking");
+        await stream.endTurn();
+        return;
+      }
       const uri = await recorder.stop();
       if (!uri) {
         setMascot("idle");
@@ -124,9 +179,11 @@ export default function Conversation() {
     }
   }
 
+  // Text fallback always uses the REST turn — it shares the same server session
+  // as the streaming socket, so history stays consistent across both paths.
   function handleSendText() {
     const text = draft.trim();
-    if (!text) return;
+    if (!text || busy) return;
     setDraft("");
     mutation.mutate({ text });
   }
@@ -139,10 +196,12 @@ export default function Conversation() {
     setMascot("celebrate");
     setError(null);
     disposeRef.current?.();
+    if (STREAMING_ENABLED) stream.disconnect();
     setTimeout(() => router.back(), 1300);
   }
 
-  const busy = mutation.isPending || mascot === "speaking";
+  const busy =
+    mutation.isPending || mascot === "speaking" || mascot === "thinking";
   const stateLabel =
     mascot === "listening"
       ? t("conversation.listening")
@@ -185,7 +244,12 @@ export default function Conversation() {
           </ThemedText>
         </View>
 
-        <Transcript messages={messages} />
+        <Transcript
+          messages={messages}
+          pending={mutation.isPending || (STREAMING_ENABLED && mascot === "thinking")}
+          liveUserText={partial}
+          emptyHint={t("conversation.idle")}
+        />
 
         {error && (
           <View style={styles.errorBox}>

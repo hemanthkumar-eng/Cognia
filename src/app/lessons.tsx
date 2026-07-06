@@ -46,7 +46,13 @@ export default function Lessons() {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} hitSlop={12}>
+        <Pressable
+          onPress={() => router.back()}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel={t("conversation.back")}
+          style={({ pressed }) => pressed && styles.pressed}
+        >
           <ThemedText type="link">‹</ThemedText>
         </Pressable>
         <ThemedText type="subtitle">{t("lessons.title")}</ThemedText>
@@ -67,7 +73,11 @@ export default function Lessons() {
           <ThemedText type="small" themeColor="textSecondary">
             {t("lessons.error")}
           </ThemedText>
-          <Pressable style={styles.retry} onPress={() => refetch()}>
+          <Pressable
+            accessibilityRole="button"
+            style={({ pressed }) => [styles.retry, pressed && styles.pressed]}
+            onPress={() => refetch()}
+          >
             <ThemedText style={styles.retryText}>{t("lessons.retry")}</ThemedText>
           </Pressable>
         </View>
@@ -78,7 +88,13 @@ export default function Lessons() {
           {ordered.map((s) => {
             const done = completed.includes(s.id);
             return (
-              <Pressable key={s.id} style={styles.card} onPress={() => open(s)}>
+              <Pressable
+                key={s.id}
+                accessibilityRole="button"
+                accessibilityLabel={`${s.title}. ${s.blurb}${done ? ". " + t("lessons.completed") : ""}`}
+                style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+                onPress={() => open(s)}
+              >
                 <ThemedText style={styles.emoji}>{s.emoji}</ThemedText>
                 <View style={styles.cardBody}>
                   <ThemedText type="smallBold">{s.title}</ThemedText>
@@ -130,4 +146,5 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
   },
   retryText: { color: "#fff", fontWeight: "700" },
+  pressed: { opacity: 0.7, transform: [{ scale: 0.98 }] },
 });
