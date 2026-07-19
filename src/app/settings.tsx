@@ -3,11 +3,12 @@ import { Alert, Pressable, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 
+import { BottomNav } from "@/components/BottomNav";
 import { ThemedText } from "@/components/themed-text";
 import { Spacing } from "@/constants/theme";
 import { clearServerHistory } from "@/lib/api";
 import { useAppStore } from "@/lib/store";
-import { Brand, Radius } from "@/lib/ui";
+import { Brand, Palette, Radius } from "@/lib/ui";
 
 export default function Settings() {
   const { t } = useTranslation();
@@ -18,66 +19,77 @@ export default function Settings() {
   function onClearHistory() {
     const oldSession = resetConversation();
     clearServerHistory(oldSession);
-    Alert.alert(t("settings.clearHistory"), "✓");
+    Alert.alert(t("settings.clearHistory"), t("settings.clearHistoryDone"));
   }
 
   function onReset() {
-    Alert.alert(t("settings.reset"), "?", [
-      { text: "Cancel", style: "cancel" },
+    Alert.alert(t("settings.reset"), t("settings.resetConfirm"), [
+      { text: t("settings.cancel"), style: "cancel" },
       {
-        text: "OK",
+        text: t("settings.confirmReset"),
         style: "destructive",
         onPress: () => {
           resetAll();
-          router.replace("/onboarding");
+          router.replace("/signup");
         },
       },
     ]);
   }
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <View style={styles.header}>
-        <ThemedText type="subtitle">{t("settings.title")}</ThemedText>
-        <Pressable onPress={() => router.back()} hitSlop={12}>
-          <ThemedText type="link">✕</ThemedText>
-        </Pressable>
-      </View>
-
-      <View style={styles.section}>
-        <ThemedText type="smallBold">{t("settings.language")}</ThemedText>
-        <View style={styles.langRow}>
-          <View style={[styles.langChip, styles.langActive]}>
-            <ThemedText style={styles.langActiveText}>English</ThemedText>
-          </View>
-          <ThemedText type="small" themeColor="textSecondary">
-            {t("settings.comingSoon")}
+    <SafeAreaView style={styles.safe} edges={["top"]}>
+      <View style={styles.content}>
+        <View style={styles.header}>
+          <ThemedText type="title" style={styles.title}>
+            {t("settings.title")}
           </ThemedText>
+        </View>
+
+        <View style={styles.section}>
+          <ThemedText type="smallBold">{t("settings.language")}</ThemedText>
+          <View style={styles.langRow}>
+            <View style={[styles.langChip, styles.langActive]}>
+              <ThemedText style={styles.langActiveText}>English</ThemedText>
+            </View>
+            <ThemedText type="small" themeColor="textSecondary">
+              {t("settings.comingSoon")}
+            </ThemedText>
+          </View>
+        </View>
+
+        <View style={styles.group}>
+          <Pressable style={styles.item} onPress={() => router.replace("/onboarding")}>
+            <ThemedText>{t("settings.editProfile")}</ThemedText>
+          </Pressable>
+
+          <Pressable style={styles.item} onPress={onClearHistory}>
+            <ThemedText>{t("settings.clearHistory")}</ThemedText>
+          </Pressable>
+
+          <Pressable style={styles.item} onPress={onReset}>
+            <ThemedText style={styles.dangerText}>{t("settings.reset")}</ThemedText>
+          </Pressable>
         </View>
       </View>
 
-      <Pressable style={styles.item} onPress={() => router.replace("/onboarding")}>
-        <ThemedText>{t("settings.editProfile")}</ThemedText>
-      </Pressable>
-
-      <Pressable style={styles.item} onPress={onClearHistory}>
-        <ThemedText>{t("settings.clearHistory")}</ThemedText>
-      </Pressable>
-
-      <Pressable style={[styles.item, styles.danger]} onPress={onReset}>
-        <ThemedText style={styles.dangerText}>{t("settings.reset")}</ThemedText>
-      </Pressable>
+      <BottomNav active="settings" />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, padding: Spacing.four },
+  safe: { flex: 1 },
+  content: { flex: 1, padding: Spacing.four },
   header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
     marginBottom: Spacing.four,
+  },
+  title: { fontSize: 34, lineHeight: 40 },
+  group: {
+    backgroundColor: Palette.surface,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: Palette.border,
+    paddingHorizontal: Spacing.three,
   },
   section: { gap: Spacing.two, marginBottom: Spacing.four },
   langRow: { flexDirection: "row", alignItems: "center", gap: Spacing.three },
@@ -86,15 +98,14 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.one,
     borderRadius: Radius.pill,
     borderWidth: 1,
-    borderColor: "#D5D8DC",
+    borderColor: Palette.border,
   },
   langActive: { backgroundColor: Brand.primary, borderColor: Brand.primary },
-  langActiveText: { color: "#fff" },
+  langActiveText: { color: Palette.white },
   item: {
     paddingVertical: Spacing.three,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderColor: "#D5D8DC",
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: Palette.border,
   },
-  danger: {},
-  dangerText: { color: "#B3261E" },
+  dangerText: { color: Palette.danger },
 });

@@ -1,28 +1,21 @@
+import { Image } from "expo-image";
 import { useEffect, useState } from "react";
-import { Animated, Easing, StyleSheet, Text, View } from "react-native";
+import { Animated, Easing, StyleSheet, View } from "react-native";
 import { Brand } from "@/lib/ui";
 import type { MascotState } from "@/lib/types";
 
-// The Cognia owl mascot. For the MVP scaffold this is a pure-Animated
-// placeholder so the app runs with zero extra assets. To get the Duolingo feel,
-// swap this for a Lottie animation (lottie-react-native is already installed):
-//   <LottieView source={require('@/assets/mascot.json')} autoPlay loop />
-// driven by `state`, or a Rive state-machine. The state prop already models
-// idle / listening / thinking / speaking / celebrate.
+// The Cognia mascot: the brand's gradient "brain" mark that gently bobs, with a
+// pulse ring whose colour reflects the current state (listening / thinking /
+// speaking / celebrate). Emoji-free and on-brand. To get a richer character
+// later, swap the <Image> for a Lottie/Rive animation driven by `state`.
 
-const FACE: Record<MascotState, string> = {
-  idle: "🦉",
-  listening: "🦉",
-  thinking: "🤔",
-  speaking: "🦉",
-  celebrate: "🥳",
-};
+const BRAIN = require("../../assets/logos/brain.svg");
 
 const RING_COLOR: Record<MascotState, string> = {
   idle: "transparent",
   listening: Brand.accent,
   thinking: Brand.primary,
-  speaking: Brand.good,
+  speaking: Brand.accent,
   celebrate: Brand.accent,
 };
 
@@ -69,8 +62,9 @@ export function Mascot({ state, size = 140 }: { state: MascotState; size?: numbe
   }, [state, pulse]);
 
   const translateY = bob.interpolate({ inputRange: [0, 1], outputRange: [0, -10] });
-  const ringScale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.6] });
+  const ringScale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.55] });
   const ringOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.5, 0] });
+  const radius = size * 0.28;
 
   return (
     <View style={[styles.wrap, { width: size * 1.7, height: size * 1.7 }]}>
@@ -81,7 +75,7 @@ export function Mascot({ state, size = 140 }: { state: MascotState; size?: numbe
             {
               width: size,
               height: size,
-              borderRadius: size / 2,
+              borderRadius: radius,
               borderColor: RING_COLOR[state],
               transform: [{ scale: ringScale }],
               opacity: ringOpacity,
@@ -89,18 +83,13 @@ export function Mascot({ state, size = 140 }: { state: MascotState; size?: numbe
           ]}
         />
       )}
-      <Animated.View
-        style={[
-          styles.body,
-          {
-            width: size,
-            height: size,
-            borderRadius: size / 2,
-            transform: [{ translateY }],
-          },
-        ]}
-      >
-        <Text style={{ fontSize: size * 0.5 }}>{FACE[state]}</Text>
+      <Animated.View style={{ transform: [{ translateY }] }}>
+        <Image
+          source={BRAIN}
+          style={{ width: size, height: size }}
+          contentFit="contain"
+          accessibilityIgnoresInvertColors
+        />
       </Animated.View>
     </View>
   );
@@ -109,9 +98,4 @@ export function Mascot({ state, size = 140 }: { state: MascotState; size?: numbe
 const styles = StyleSheet.create({
   wrap: { alignItems: "center", justifyContent: "center" },
   ring: { position: "absolute", borderWidth: 4 },
-  body: {
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#E6F4FE",
-  },
 });

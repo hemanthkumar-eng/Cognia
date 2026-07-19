@@ -1,3 +1,4 @@
+import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useState } from "react";
@@ -18,6 +19,8 @@ import { Spacing } from "@/constants/theme";
 import { useAppStore } from "@/lib/store";
 import { Palette, Radius } from "@/lib/ui";
 
+type FocusTarget = null | "email" | "password";
+
 export default function SignUp() {
   const { t } = useTranslation();
   const router = useRouter();
@@ -26,6 +29,7 @@ export default function SignUp() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [focused, setFocused] = useState<FocusTarget>(null);
 
   // Placeholder auth. Real Supabase email/OAuth calls land here later; for now
   // every path just marks the user authed and continues to profile setup.
@@ -37,7 +41,7 @@ export default function SignUp() {
   const canSubmit = email.trim().length > 3 && password.length >= 8;
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
       <StatusBar style="dark" />
       <KeyboardAvoidingView
         style={styles.flex}
@@ -48,15 +52,17 @@ export default function SignUp() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Brand mark */}
-          <View style={styles.brandRow}>
+          {/* Brand + heading — centred lockup */}
+          <View style={styles.header}>
             <View style={styles.logo}>
-              <ThemedText style={styles.logoGlyph}>C</ThemedText>
+              <Image
+                source={require("../../assets/logos/brain.svg")}
+                style={styles.logoMark}
+                contentFit="contain"
+                accessibilityIgnoresInvertColors
+              />
             </View>
-            <ThemedText style={styles.wordmark}>Cognia</ThemedText>
-          </View>
-
-          <View style={styles.heading}>
+            <ThemedText style={styles.wordmark}>{t("appName")}</ThemedText>
             <ThemedText style={styles.title}>{t("auth.createTitle")}</ThemedText>
             <ThemedText style={styles.subtitle}>{t("auth.subtitle")}</ThemedText>
           </View>
@@ -65,13 +71,27 @@ export default function SignUp() {
           <View style={styles.social}>
             <SocialButton
               label={t("auth.continueGoogle")}
-              mark={<ThemedText style={styles.googleMark}>G</ThemedText>}
+              mark={
+                <Image
+                  source={require("../../assets/logos/google.svg")}
+                  style={styles.googleMark}
+                  contentFit="contain"
+                  accessibilityIgnoresInvertColors
+                />
+              }
               onPress={proceed}
             />
             {Platform.OS === "ios" && (
               <SocialButton
                 label={t("auth.continueApple")}
-                mark={<ThemedText style={styles.appleMark}></ThemedText>}
+                mark={
+                  <Image
+                    source={require("../../assets/logos/apple.svg")}
+                    style={styles.appleMark}
+                    contentFit="contain"
+                    accessibilityIgnoresInvertColors
+                  />
+                }
                 onPress={proceed}
               />
             )}
@@ -87,11 +107,13 @@ export default function SignUp() {
           {/* Email + password */}
           <Field label={t("auth.email")}>
             <TextInput
-              style={styles.input}
+              style={[styles.input, focused === "email" && styles.inputFocused]}
               placeholder={t("auth.emailPlaceholder")}
               placeholderTextColor={Palette.inkMuted}
               value={email}
               onChangeText={setEmail}
+              onFocus={() => setFocused("email")}
+              onBlur={() => setFocused(null)}
               autoCapitalize="none"
               autoComplete="email"
               keyboardType="email-address"
@@ -100,13 +122,22 @@ export default function SignUp() {
           </Field>
 
           <Field label={t("auth.password")}>
-            <View style={styles.passwordRow}>
+            {/* The TextInput itself is the full-size box (so its native hit
+                target covers the whole field); the Show/Hide button floats
+                over its right edge. */}
+            <View style={styles.passwordWrap}>
               <TextInput
-                style={[styles.input, styles.inputFlush]}
+                style={[
+                  styles.input,
+                  styles.inputFlush,
+                  focused === "password" && styles.inputFocused,
+                ]}
                 placeholder={t("auth.passwordPlaceholder")}
                 placeholderTextColor={Palette.inkMuted}
                 value={password}
                 onChangeText={setPassword}
+                onFocus={() => setFocused("password")}
+                onBlur={() => setFocused(null)}
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
                 autoComplete="password-new"
@@ -181,6 +212,7 @@ function SocialButton({
       accessibilityLabel={label}
       style={({ pressed }) => [styles.socialBtn, pressed && styles.pressed]}
     >
+      {/* Icon is absolutely positioned so the label stays optically centred. */}
       <View style={styles.socialMark}>{mark}</View>
       <ThemedText style={styles.socialText}>{label}</ThemedText>
     </Pressable>
@@ -191,69 +223,110 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Palette.surface },
   flex: { flex: 1 },
   content: {
+    flexGrow: 1,
+    justifyContent: "center",
     paddingHorizontal: Spacing.four,
-    paddingTop: Spacing.five,
-    paddingBottom: Spacing.four,
+    paddingVertical: Spacing.five,
     gap: Spacing.three,
   },
 
-  brandRow: { flexDirection: "row", alignItems: "center", gap: Spacing.two },
+  // Brand + heading
+  header: { alignItems: "center", gap: Spacing.two, marginBottom: Spacing.two },
   logo: {
-    width: 40,
-    height: 40,
-    borderRadius: Radius.sm + 2,
-    backgroundColor: Palette.primary,
-    alignItems: "center",
-    justifyContent: "center",
+    width: 64,
+    height: 64,
+    borderRadius: 17,
+    // Soft coloured shadow under the gradient tile (the tile itself is drawn
+    // inside the SVG, so this View is just the shadow caster).
+    backgroundColor: "#1E3A8A",
+    shadowColor: "#1E3A8A",
+    shadowOpacity: 0.35,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 6,
   },
-  logoGlyph: { color: "#fff", fontSize: 22, fontWeight: "800", lineHeight: 26 },
-  wordmark: { color: Palette.ink, fontSize: 18, fontWeight: "700", letterSpacing: -0.2 },
+  logoMark: { width: 64, height: 64 },
+  wordmark: {
+    color: Palette.inkMuted,
+    fontSize: 14,
+    fontWeight: "700",
+    letterSpacing: 1.5,
+    textTransform: "uppercase",
+    marginTop: Spacing.one,
+  },
+  title: {
+    color: Palette.ink,
+    fontSize: 28,
+    fontWeight: "700",
+    letterSpacing: -0.4,
+    textAlign: "center",
+  },
+  subtitle: {
+    color: Palette.inkMuted,
+    fontSize: 15,
+    lineHeight: 22,
+    textAlign: "center",
+    maxWidth: 300,
+  },
 
-  heading: { gap: Spacing.one, marginTop: Spacing.three },
-  title: { color: Palette.ink, fontSize: 28, fontWeight: "700", letterSpacing: -0.4 },
-  subtitle: { color: Palette.inkMuted, fontSize: 15, lineHeight: 22 },
-
-  social: { gap: Spacing.two, marginTop: Spacing.two },
+  // Social
+  social: { gap: Spacing.two },
   socialBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: Spacing.two,
-    height: 52,
-    borderRadius: Radius.md - 4,
+    height: 54,
+    borderRadius: Radius.md - 2,
     borderWidth: 1,
     borderColor: Palette.border,
     backgroundColor: Palette.surface,
   },
-  socialMark: { width: 22, alignItems: "center" },
+  socialMark: { position: "absolute", left: Spacing.four, width: 22, alignItems: "center" },
   socialText: { color: Palette.ink, fontSize: 15, fontWeight: "600" },
-  googleMark: { color: "#4285F4", fontSize: 18, fontWeight: "800" },
-  appleMark: { color: Palette.ink, fontSize: 18, lineHeight: 20 },
+  googleMark: { width: 20, height: 20 },
+  appleMark: { width: 19, height: 22, marginTop: -2 },
 
-  divider: { flexDirection: "row", alignItems: "center", gap: Spacing.two, marginVertical: Spacing.one },
+  // Divider
+  divider: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.three,
+    marginVertical: Spacing.one,
+  },
   line: { flex: 1, height: 1, backgroundColor: Palette.border },
-  dividerText: { color: Palette.inkMuted, fontSize: 13, fontWeight: "500" },
+  dividerText: { color: Palette.inkMuted, fontSize: 13, fontWeight: "600" },
 
+  // Fields
   field: { gap: Spacing.one + 2 },
   label: { color: Palette.inkSoft, fontSize: 13, fontWeight: "600", letterSpacing: 0.1 },
   input: {
-    height: 52,
-    borderRadius: Radius.md - 4,
-    borderWidth: 1,
+    height: 54,
+    borderRadius: Radius.md - 2,
+    borderWidth: 1.5,
     borderColor: Palette.border,
     backgroundColor: Palette.surfaceMuted,
     paddingHorizontal: Spacing.three,
     fontSize: 16,
     color: Palette.ink,
   },
-  passwordRow: { position: "relative", justifyContent: "center" },
-  inputFlush: { paddingRight: 68 },
+  inputFocused: {
+    borderColor: Palette.primary,
+    backgroundColor: Palette.surface,
+    shadowColor: Palette.primary,
+    shadowOpacity: 0.14,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  passwordWrap: { position: "relative", justifyContent: "center" },
+  inputFlush: { paddingRight: 76 },
   showToggle: { position: "absolute", right: Spacing.three },
-  showText: { color: Palette.primary, fontSize: 13, fontWeight: "600" },
+  showText: { color: Palette.primary, fontSize: 13, fontWeight: "700" },
 
+  // CTA
   cta: {
     height: 54,
-    borderRadius: Radius.md - 4,
+    borderRadius: Radius.md - 2,
     backgroundColor: Palette.primary,
     alignItems: "center",
     justifyContent: "center",
@@ -273,6 +346,8 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     textAlign: "center",
     marginTop: Spacing.one,
+    maxWidth: 320,
+    alignSelf: "center",
   },
 
   footer: {

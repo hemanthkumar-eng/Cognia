@@ -15,7 +15,7 @@ import { Spacing } from "@/constants/theme";
 import { getScenarios } from "@/lib/api";
 import { useAppStore } from "@/lib/store";
 import type { Scenario } from "@/lib/types";
-import { Brand, Radius } from "@/lib/ui";
+import { Brand, Palette, Radius } from "@/lib/ui";
 
 export default function Lessons() {
   const { t } = useTranslation();
@@ -95,7 +95,11 @@ export default function Lessons() {
                 style={({ pressed }) => [styles.card, pressed && styles.pressed]}
                 onPress={() => open(s)}
               >
-                <ThemedText style={styles.emoji}>{s.emoji}</ThemedText>
+                <View style={styles.avatar}>
+                  <ThemedText style={styles.avatarText}>
+                    {s.title.charAt(0).toUpperCase()}
+                  </ThemedText>
+                </View>
                 <View style={styles.cardBody}>
                   <ThemedText type="smallBold">{s.title}</ThemedText>
                   <ThemedText type="small" themeColor="textSecondary">
@@ -133,9 +137,18 @@ const styles = StyleSheet.create({
     padding: Spacing.three,
     borderRadius: Radius.md,
     borderWidth: 1,
-    borderColor: "#E2E5E9",
+    borderColor: Palette.border,
+    backgroundColor: Palette.surface,
   },
-  emoji: { fontSize: 30 },
+  avatar: {
+    width: 44,
+    height: 44,
+    borderRadius: Radius.md - 4,
+    backgroundColor: Palette.primarySoft,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarText: { color: Palette.primary, fontSize: 20, fontWeight: "800" },
   cardBody: { flex: 1, gap: 2 },
   done: { color: Brand.good, fontWeight: "700" },
   retry: {
@@ -145,6 +158,6 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two,
     borderRadius: Radius.md,
   },
-  retryText: { color: "#fff", fontWeight: "700" },
+  retryText: { color: Palette.white, fontWeight: "700" },
   pressed: { opacity: 0.7, transform: [{ scale: 0.98 }] },
 });

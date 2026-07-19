@@ -4,11 +4,11 @@
  */
 
 import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
 
+// Cognia is locked to light mode (see app.json `userInterfaceStyle` and the
+// root `ThemeProvider`), so themed text/views always resolve against the light
+// palette regardless of the device's system setting. If a dark theme is ever
+// reintroduced, switch this back to reading `useColorScheme()`.
 export function useTheme() {
-  const scheme = useColorScheme();
-  const theme = scheme === 'unspecified' ? 'light' : scheme;
-
-  return Colors[theme];
+  return Colors.light;
 }

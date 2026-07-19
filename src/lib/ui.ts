@@ -1,14 +1,41 @@
-// Cognia brand palette + a few shared UI constants.
-// Layered on top of the template's Colors/Spacing (src/constants/theme.ts).
+// Cognia design tokens — the single source of truth for colour.
+//
+// The seven base colours are the agreed brand palette; the handful of extra
+// entries are light/dark tints derived from them (focus rings, bubbles, error
+// states) that any real UI needs. Everything in the app resolves to these —
+// `Brand` below is just a semantic alias layer over the same values.
+export const Palette = {
+  // Base palette
+  primary: "#1D4ED8", // Deep Blue — primary actions, links, brand
+  secondary: "#10B981", // Emerald — success, streaks, "finish"
+  background: "#F8FAFC", // Off White — app background
+  surface: "#FFFFFF", // White — cards, inputs
+  ink: "#0F172A", // Slate — primary text
+  inkMuted: "#64748B", // Gray — secondary text
+  border: "#E2E8F0", // Light Gray — borders, dividers
 
+  // Derived tints / functional
+  primaryDark: "#1E40AF", // pressed state, gradient end
+  primarySoft: "#EFF4FF", // soft primary fill (focus rings, secondary buttons)
+  secondarySoft: "#ECFDF5", // soft emerald fill
+  surfaceMuted: "#F1F5F9", // subtle fill (resting input, tutor bubble)
+  inkSoft: "#334155", // slightly softer heading/body ink
+  borderStrong: "#CBD5E1", // stronger separation / disabled fill
+  danger: "#DC2626", // error / destructive
+  dangerSoft: "#FEF2F2", // error background
+  white: "#FFFFFF",
+} as const;
+
+// Semantic aliases used inside the tutor experience (mascot, bubbles, mic).
+// Kept as a thin layer so those components read naturally while still pulling
+// from the one palette above.
 export const Brand = {
-  primary: "#208AEF", // matches the splash color
-  primaryDark: "#1567C2",
-  accent: "#FF8A3D", // warm, kid-friendly
-  good: "#36B37E",
-  bubbleUser: "#208AEF",
-  bubbleTutor: "#F0F0F3",
-  bubbleTutorDark: "#212225",
+  primary: Palette.primary,
+  primaryDark: Palette.primaryDark,
+  accent: Palette.secondary, // emerald — active / highlight states
+  good: Palette.secondary, // success / finish
+  bubbleUser: Palette.primary,
+  bubbleTutor: Palette.surfaceMuted,
 } as const;
 
 export const Radius = {
@@ -16,21 +43,4 @@ export const Radius = {
   md: 16,
   lg: 24,
   pill: 999,
-} as const;
-
-// Professional, light-first neutral palette for the auth / account surfaces.
-// Slate neutrals + one confident blue — deliberately calmer and more "product"
-// than the playful Brand palette used inside the tutor experience.
-export const Palette = {
-  ink: "#0F172A", // headings — near-black with a cool cast
-  inkSoft: "#334155", // body text
-  inkMuted: "#64748B", // secondary / captions
-  border: "#E2E8F0", // hairline dividers, input borders
-  borderStrong: "#CBD5E1", // hover / stronger separation
-  surface: "#FFFFFF",
-  surfaceMuted: "#F8FAFC", // resting input fill, subtle cards
-  primary: "#2563EB",
-  primaryDark: "#1D4ED8",
-  primarySoft: "#EFF4FF", // tint for focus rings / soft fills
-  danger: "#DC2626",
 } as const;

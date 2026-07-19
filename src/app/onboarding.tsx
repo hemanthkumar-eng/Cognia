@@ -15,7 +15,7 @@ import { ThemedText } from "@/components/themed-text";
 import { Spacing } from "@/constants/theme";
 import { useAppStore } from "@/lib/store";
 import type { Level } from "@/lib/types";
-import { Brand, Radius } from "@/lib/ui";
+import { Brand, Palette, Radius } from "@/lib/ui";
 
 const LEVELS: Level[] = ["beginner", "intermediate", "advanced"];
 const INTEREST_KEYS = [
@@ -72,7 +72,7 @@ export default function Onboarding() {
         <TextInput
           style={styles.input}
           placeholder={t("onboarding.namePlaceholder")}
-          placeholderTextColor="#9AA0A6"
+          placeholderTextColor={Palette.inkMuted}
           value={name}
           onChangeText={setName}
         />
@@ -81,7 +81,7 @@ export default function Onboarding() {
         <TextInput
           style={styles.input}
           placeholder="1–12"
-          placeholderTextColor="#9AA0A6"
+          placeholderTextColor={Palette.inkMuted}
           keyboardType="number-pad"
           value={grade}
           onChangeText={setGrade}
@@ -161,12 +161,13 @@ const styles = StyleSheet.create({
   title: { textAlign: "center" },
   input: {
     borderWidth: 1,
-    borderColor: "#D5D8DC",
+    borderColor: Palette.border,
     borderRadius: Radius.md,
+    backgroundColor: Palette.surface,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
     fontSize: 16,
-    color: "#000",
+    color: Palette.ink,
   },
   row: { flexDirection: "row", gap: Spacing.two },
   wrapRow: { flexDirection: "row", flexWrap: "wrap", gap: Spacing.two },
@@ -175,10 +176,11 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two,
     borderRadius: Radius.pill,
     borderWidth: 1,
-    borderColor: "#D5D8DC",
+    borderColor: Palette.border,
+    backgroundColor: Palette.surface,
   },
   chipSelected: { backgroundColor: Brand.primary, borderColor: Brand.primary },
-  chipTextSelected: { color: "#ffffff" },
+  chipTextSelected: { color: Palette.white },
   cta: {
     marginTop: Spacing.three,
     backgroundColor: Brand.primary,
@@ -186,6 +188,6 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.three,
     alignItems: "center",
   },
-  ctaText: { color: "#ffffff", fontSize: 18, fontWeight: "700" },
+  ctaText: { color: Palette.white, fontSize: 18, fontWeight: "700" },
   pressed: { opacity: 0.75, transform: [{ scale: 0.97 }] },
 });

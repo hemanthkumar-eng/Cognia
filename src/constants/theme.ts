@@ -7,20 +7,22 @@ import '@/global.css';
 
 import { Platform } from 'react-native';
 
+// Colours resolve against the Cognia palette (src/lib/ui.ts). The app is locked
+// to light mode, so `dark` mirrors the same tokens and is effectively unused.
 export const Colors = {
   light: {
-    text: '#000000',
-    background: '#ffffff',
-    backgroundElement: '#F0F0F3',
-    backgroundSelected: '#E0E1E6',
-    textSecondary: '#60646C',
+    text: '#0F172A', // Slate — primary text
+    background: '#F8FAFC', // Off White — app background
+    backgroundElement: '#F1F5F9', // subtle surface fill
+    backgroundSelected: '#E2E8F0', // Light Gray — border / selected
+    textSecondary: '#64748B', // Gray — secondary text
   },
   dark: {
-    text: '#ffffff',
-    background: '#000000',
-    backgroundElement: '#212225',
-    backgroundSelected: '#2E3135',
-    textSecondary: '#B0B4BA',
+    text: '#0F172A',
+    background: '#F8FAFC',
+    backgroundElement: '#F1F5F9',
+    backgroundSelected: '#E2E8F0',
+    textSecondary: '#64748B',
   },
 } as const;
 

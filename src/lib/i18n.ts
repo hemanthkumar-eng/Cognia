@@ -40,8 +40,14 @@ const resources = {
         start: "Start learning",
       },
 
+      nav: {
+        home: "Home",
+        progress: "Progress",
+        settings: "Settings",
+      },
+
       home: {
-        greeting: "Hi {{name}}! 👋",
+        greeting: "Hi {{name}}!",
         prompt: "Ready to talk in English?",
         startTalking: "Free chat",
         lessons: "Lessons",
@@ -51,13 +57,25 @@ const resources = {
         lessonsDone: "lessons",
       },
 
+      tracking: {
+        title: "Your progress",
+        subtitle: "Keep the streak going.",
+        streak: "Day streak",
+        xp: "Total XP",
+        lessonsDone: "Lessons done",
+        recentTitle: "Recent activity",
+        empty: "Finish a lesson or a chat to start tracking your progress.",
+        lastActive: "Last active",
+        never: "Not yet",
+      },
+
       lessons: {
         title: "Choose a lesson",
         subtitle: "Pick something to practise",
         loading: "Loading lessons…",
         error: "Couldn't load lessons. Is the server running?",
         retry: "Try again",
-        completed: "Done ✓",
+        completed: "Done",
       },
 
       conversation: {
@@ -71,7 +89,7 @@ const resources = {
         back: "Back",
         finish: "Finish lesson",
         freeChat: "Free chat",
-        wellDone: "Well done! 🎉",
+        wellDone: "Well done!",
         completedXp: "+{{xp}} XP",
       },
 
@@ -80,8 +98,13 @@ const resources = {
         language: "Language",
         comingSoon: "More languages coming soon",
         clearHistory: "Clear conversation",
+        clearHistoryDone: "Your conversation has been cleared.",
         editProfile: "Edit profile",
         reset: "Reset everything",
+        resetConfirm:
+          "This erases your profile, progress and conversations on this device. This can't be undone.",
+        cancel: "Cancel",
+        confirmReset: "Reset",
       },
 
       interests: {

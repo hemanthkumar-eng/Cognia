@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Animated, Easing, Pressable, StyleSheet, View } from "react-native";
-import { ThemedText } from "@/components/themed-text";
-import { Brand, Radius } from "@/lib/ui";
+import { AppIcon } from "@/components/AppIcon";
+import { Brand, Palette, Radius } from "@/lib/ui";
 
 // Push-to-talk: press and hold to record, release to send.
 // Disabled while the tutor is thinking/speaking so turns don't overlap.
@@ -61,7 +61,11 @@ export function MicButton({
         ]}
         hitSlop={12}
       >
-        <ThemedText style={styles.icon}>{active ? "●" : "🎤"}</ThemedText>
+        {active ? (
+          <View style={styles.stopIcon} />
+        ) : (
+          <AppIcon name="mic" size={34} color={Palette.white} />
+        )}
       </Pressable>
     </View>
   );
@@ -94,5 +98,10 @@ const styles = StyleSheet.create({
   buttonActive: { backgroundColor: Brand.accent, transform: [{ scale: 1.08 }] },
   buttonPressed: { transform: [{ scale: 0.94 }] },
   buttonDisabled: { opacity: 0.4 },
-  icon: { fontSize: 34, color: "#ffffff" },
+  stopIcon: {
+    width: 26,
+    height: 26,
+    borderRadius: 7,
+    backgroundColor: Palette.white,
+  },
 });

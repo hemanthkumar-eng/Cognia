@@ -23,7 +23,7 @@ import { STREAMING_ENABLED } from "@/lib/config";
 import { useStreamingSession, type StreamHandlers } from "@/lib/streaming";
 import { useAppStore } from "@/lib/store";
 import type { MascotState } from "@/lib/types";
-import { Brand, Radius } from "@/lib/ui";
+import { Brand, Palette, Radius } from "@/lib/ui";
 
 let idCounter = 0;
 const nextId = () => `m_${Date.now()}_${idCounter++}`;
@@ -264,7 +264,7 @@ export default function Conversation() {
             <TextInput
               style={styles.textInput}
               placeholder="Type your message…"
-              placeholderTextColor="#9AA0A6"
+              placeholderTextColor={Palette.inkMuted}
               value={draft}
               onChangeText={setDraft}
               onSubmitEditing={handleSendText}
@@ -320,23 +320,24 @@ const styles = StyleSheet.create({
   finish: { color: Brand.good, fontWeight: "700" },
   mascotRow: { alignItems: "center", gap: Spacing.one, paddingBottom: Spacing.two },
   errorBox: {
-    backgroundColor: "#FDECEA",
+    backgroundColor: Palette.dangerSoft,
     borderRadius: Radius.sm,
     padding: Spacing.two,
     marginBottom: Spacing.two,
   },
-  errorText: { color: "#B3261E" },
+  errorText: { color: Palette.danger },
   controls: { alignItems: "center", gap: Spacing.two, paddingVertical: Spacing.three },
   textRow: { flexDirection: "row", gap: Spacing.two, paddingVertical: Spacing.three },
   textInput: {
     flex: 1,
     borderWidth: 1,
-    borderColor: "#D5D8DC",
+    borderColor: Palette.border,
     borderRadius: Radius.md,
+    backgroundColor: Palette.surface,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
     fontSize: 16,
-    color: "#000",
+    color: Palette.ink,
   },
   sendBtn: {
     backgroundColor: Brand.primary,
@@ -344,6 +345,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     justifyContent: "center",
   },
-  sendText: { color: "#fff", fontWeight: "700" },
+  sendText: { color: Palette.white, fontWeight: "700" },
   toggle: { alignItems: "center", paddingBottom: Spacing.two },
 });

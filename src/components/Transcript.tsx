@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Animated, Easing, ScrollView, StyleSheet, View } from "react-native";
 import { ThemedText } from "@/components/themed-text";
 import { Spacing } from "@/constants/theme";
-import { Brand, Radius } from "@/lib/ui";
+import { Brand, Palette, Radius } from "@/lib/ui";
 import type { Message } from "@/lib/types";
 
 // The on-screen caption area: every spoken line from both the student and the
@@ -150,5 +150,5 @@ const styles = StyleSheet.create({
   userText: { color: "#ffffff" },
   typingBubble: { flexDirection: "row", alignItems: "center" },
   dots: { flexDirection: "row", gap: 5, paddingVertical: 4 },
-  dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: "#8A9099" },
+  dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: Palette.inkMuted },
 });
