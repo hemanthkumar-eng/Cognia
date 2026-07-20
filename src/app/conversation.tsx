@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 
+import { GlassBackground } from "@/components/Glass";
 import { Mascot } from "@/components/Mascot";
 import { MicButton } from "@/components/MicButton";
 import { ThemedText } from "@/components/themed-text";
@@ -23,7 +24,7 @@ import { STREAMING_ENABLED } from "@/lib/config";
 import { useStreamingSession, type StreamHandlers } from "@/lib/streaming";
 import { useAppStore } from "@/lib/store";
 import type { MascotState } from "@/lib/types";
-import { Brand, Palette, Radius } from "@/lib/ui";
+import { Brand, Glass, Palette, Radius } from "@/lib/ui";
 
 let idCounter = 0;
 const nextId = () => `m_${Date.now()}_${idCounter++}`;
@@ -38,15 +39,22 @@ export default function Conversation() {
   const router = useRouter();
   const recorder = useVoiceRecorder();
 
-  const params = useLocalSearchParams<{ scenarioId?: string; title?: string }>();
+  const params = useLocalSearchParams<{
+    scenarioId?: string;
+    title?: string;
+    topicId?: string;
+  }>();
   const scenarioId = typeof params.scenarioId === "string" ? params.scenarioId : undefined;
   const title = typeof params.title === "string" ? params.title : undefined;
+  // A syllabus topic practised from the Progress screen — marked complete on finish.
+  const topicId = typeof params.topicId === "string" ? params.topicId : undefined;
 
   const messages = useAppStore((s) => s.messages);
   const addMessage = useAppStore((s) => s.addMessage);
   const resetConversation = useAppStore((s) => s.resetConversation);
   const recordActivity = useAppStore((s) => s.recordActivity);
   const completeScenario = useAppStore((s) => s.completeScenario);
+  const completeTopic = useAppStore((s) => s.completeTopic);
 
   const [mascot, setMascot] = useState<MascotState>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -130,8 +138,10 @@ export default function Conversation() {
     if (startedRef.current) return;
     startedRef.current = true;
 
-    const opening = scenarioId ? true : messages.length === 0;
-    if (scenarioId) resetConversation();
+    // Lessons and topic practice both start a fresh, tutor-led session.
+    const themed = Boolean(scenarioId || topicId);
+    const opening = themed ? true : messages.length === 0;
+    if (themed) resetConversation();
 
     if (STREAMING_ENABLED) {
       if (opening) expectingOpeningRef.current = true;
@@ -189,8 +199,9 @@ export default function Conversation() {
   }
 
   function handleFinish() {
-    if (scenarioId) {
-      completeScenario(scenarioId);
+    if (scenarioId || topicId) {
+      if (scenarioId) completeScenario(scenarioId);
+      if (topicId) completeTopic(topicId);
       recordActivity(FINISH_XP);
     }
     setMascot("celebrate");
@@ -214,7 +225,8 @@ export default function Conversation() {
             : t("conversation.idle");
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <GlassBackground>
+      <SafeAreaView style={styles.safe}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -226,7 +238,7 @@ export default function Conversation() {
           <ThemedText type="smallBold">
             {title ?? t("conversation.freeChat")}
           </ThemedText>
-          {scenarioId ? (
+          {scenarioId || topicId ? (
             <Pressable onPress={handleFinish} hitSlop={12}>
               <ThemedText type="link" style={styles.finish}>
                 {t("conversation.finish")}
@@ -304,12 +316,13 @@ export default function Conversation() {
           </ThemedText>
         </Pressable>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+      </SafeAreaView>
+    </GlassBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1 },
+  safe: { flex: 1, backgroundColor: "transparent" },
   flex: { flex: 1, paddingHorizontal: Spacing.four },
   header: {
     flexDirection: "row",
@@ -331,9 +344,9 @@ const styles = StyleSheet.create({
   textInput: {
     flex: 1,
     borderWidth: 1,
-    borderColor: Palette.border,
+    borderColor: Glass.border,
     borderRadius: Radius.md,
-    backgroundColor: Palette.surface,
+    backgroundColor: Glass.tint,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
     fontSize: 16,

@@ -44,3 +44,19 @@ export const Radius = {
   lg: 24,
   pill: 999,
 } as const;
+
+// Liquid-glass surfaces (iOS 26/27 inspired). Frosted BlurView + a translucent
+// white tint + a bright top edge, over the soft gradient backdrop. Same palette —
+// these are just translucent forms of the existing surface/border tokens.
+export const Glass = {
+  tint: "rgba(255,255,255,0.55)", // overlay lightening the blur into a frosted panel
+  tintStrong: "rgba(255,255,255,0.7)", // nav / primary surfaces
+  border: "rgba(255,255,255,0.65)", // bright glass edge
+  borderSoft: "rgba(148,163,184,0.28)", // subtle separation (slate @ low alpha)
+  intensity: 36, // BlurView intensity for cards
+  intensityNav: 28,
+  // Subtle primary→emerald backdrop the frosted glass refracts.
+  gradient: ["#E9F1FF", "#F8FAFC", "#E7FBF2"] as const,
+  blobPrimary: "rgba(29,78,216,0.12)", // Deep Blue pool, top-right
+  blobEmerald: "rgba(16,185,129,0.12)", // Emerald pool, bottom-left
+} as const;

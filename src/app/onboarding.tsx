@@ -10,14 +10,16 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 
+import { GlassBackground } from "@/components/Glass";
 import { Mascot } from "@/components/Mascot";
 import { ThemedText } from "@/components/themed-text";
 import { Spacing } from "@/constants/theme";
 import { useAppStore } from "@/lib/store";
-import type { Level } from "@/lib/types";
-import { Brand, Palette, Radius } from "@/lib/ui";
+import type { Board, Level } from "@/lib/types";
+import { Brand, Glass, Palette, Radius } from "@/lib/ui";
 
 const LEVELS: Level[] = ["beginner", "intermediate", "advanced"];
+const BOARDS: Board[] = ["icse", "cbse"];
 const INTEREST_KEYS = [
   "cricket",
   "space",
@@ -35,11 +37,14 @@ export default function Onboarding() {
   const { t } = useTranslation();
   const router = useRouter();
   const completeOnboarding = useAppStore((s) => s.completeOnboarding);
+  // Pre-fill from the saved profile so Settings → "Edit profile" keeps existing values.
+  const profile = useAppStore((s) => s.profile);
 
-  const [name, setName] = useState("");
-  const [grade, setGrade] = useState("");
-  const [level, setLevel] = useState<Level>("beginner");
-  const [interests, setInterests] = useState<string[]>([]);
+  const [name, setName] = useState(profile.name === "friend" ? "" : profile.name);
+  const [grade, setGrade] = useState(profile.grade ? String(profile.grade) : "");
+  const [board, setBoard] = useState<Board | undefined>(profile.board);
+  const [level, setLevel] = useState<Level>(profile.level);
+  const [interests, setInterests] = useState<string[]>(profile.interests);
 
   function toggleInterest(key: string) {
     setInterests((cur) =>
@@ -52,6 +57,7 @@ export default function Onboarding() {
     completeOnboarding({
       name: name.trim() || "friend",
       grade: Number.isFinite(parsedGrade) ? parsedGrade : undefined,
+      board,
       level,
       interests,
       language: "en-IN",
@@ -60,8 +66,9 @@ export default function Onboarding() {
   }
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.content}>
+    <GlassBackground>
+      <SafeAreaView style={styles.safe}>
+        <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.hero}>
           <Mascot state="celebrate" size={110} />
           <ThemedText type="subtitle" style={styles.title}>
@@ -87,6 +94,18 @@ export default function Onboarding() {
           onChangeText={setGrade}
           maxLength={2}
         />
+
+        <ThemedText type="smallBold">{t("onboarding.boardLabel")}</ThemedText>
+        <View style={styles.row}>
+          {BOARDS.map((b) => (
+            <Chip
+              key={b}
+              label={t(`board.${b}`)}
+              selected={board === b}
+              onPress={() => setBoard(b)}
+            />
+          ))}
+        </View>
 
         <ThemedText type="smallBold">{t("onboarding.levelLabel")}</ThemedText>
         <View style={styles.row}>
@@ -120,8 +139,9 @@ export default function Onboarding() {
         >
           <ThemedText style={styles.ctaText}>{t("onboarding.start")}</ThemedText>
         </Pressable>
-      </ScrollView>
-    </SafeAreaView>
+        </ScrollView>
+      </SafeAreaView>
+    </GlassBackground>
   );
 }
 
@@ -155,15 +175,15 @@ function Chip({
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 const styles = StyleSheet.create({
-  safe: { flex: 1 },
+  safe: { flex: 1, backgroundColor: "transparent" },
   content: { padding: Spacing.four, gap: Spacing.three },
   hero: { alignItems: "center", gap: Spacing.two, marginBottom: Spacing.two },
   title: { textAlign: "center" },
   input: {
     borderWidth: 1,
-    borderColor: Palette.border,
+    borderColor: Glass.border,
     borderRadius: Radius.md,
-    backgroundColor: Palette.surface,
+    backgroundColor: Glass.tint,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
     fontSize: 16,
@@ -176,8 +196,8 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two,
     borderRadius: Radius.pill,
     borderWidth: 1,
-    borderColor: Palette.border,
-    backgroundColor: Palette.surface,
+    borderColor: Glass.border,
+    backgroundColor: Glass.tint,
   },
   chipSelected: { backgroundColor: Brand.primary, borderColor: Brand.primary },
   chipTextSelected: { color: Palette.white },

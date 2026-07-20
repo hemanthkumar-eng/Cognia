@@ -16,9 +16,12 @@ export type LanguageCode =
   | "ml-IN"
   | "pa-IN";
 
+export type Board = "icse" | "cbse";
+
 export interface Profile {
   name: string;
   grade?: number; // class / standard 1-12 (optional)
+  board?: Board; // ICSE/CBSE — future syllabus/prompt hint (ignored for now)
   level: Level; // ability — drives difficulty
   interests: string[]; // themes the tutor weaves in
   language: LanguageCode; // 'en-IN' default

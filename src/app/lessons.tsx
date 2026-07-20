@@ -10,6 +10,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 
+import { GlassBackground, GlassView } from "@/components/Glass";
 import { ThemedText } from "@/components/themed-text";
 import { Spacing } from "@/constants/theme";
 import { getScenarios } from "@/lib/api";
@@ -44,7 +45,8 @@ export default function Lessons() {
   }
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <GlassBackground>
+      <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
         <Pressable
           onPress={() => router.back()}
@@ -92,36 +94,41 @@ export default function Lessons() {
                 key={s.id}
                 accessibilityRole="button"
                 accessibilityLabel={`${s.title}. ${s.blurb}${done ? ". " + t("lessons.completed") : ""}`}
-                style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+                style={({ pressed }) => pressed && styles.pressed}
                 onPress={() => open(s)}
               >
-                <View style={styles.avatar}>
-                  <ThemedText style={styles.avatarText}>
-                    {s.title.charAt(0).toUpperCase()}
-                  </ThemedText>
-                </View>
-                <View style={styles.cardBody}>
-                  <ThemedText type="smallBold">{s.title}</ThemedText>
-                  <ThemedText type="small" themeColor="textSecondary">
-                    {s.blurb}
-                  </ThemedText>
-                </View>
-                {done && (
-                  <ThemedText type="small" style={styles.done}>
-                    {t("lessons.completed")}
-                  </ThemedText>
-                )}
+                <GlassView radius={Radius.md}>
+                  <View style={styles.card}>
+                    <View style={styles.avatar}>
+                      <ThemedText style={styles.avatarText}>
+                        {s.title.charAt(0).toUpperCase()}
+                      </ThemedText>
+                    </View>
+                    <View style={styles.cardBody}>
+                      <ThemedText type="smallBold">{s.title}</ThemedText>
+                      <ThemedText type="small" themeColor="textSecondary">
+                        {s.blurb}
+                      </ThemedText>
+                    </View>
+                    {done && (
+                      <ThemedText type="small" style={styles.done}>
+                        {t("lessons.completed")}
+                      </ThemedText>
+                    )}
+                  </View>
+                </GlassView>
               </Pressable>
             );
           })}
         </ScrollView>
       )}
-    </SafeAreaView>
+      </SafeAreaView>
+    </GlassBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, padding: Spacing.four },
+  safe: { flex: 1, padding: Spacing.four, backgroundColor: "transparent" },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -135,10 +142,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: Spacing.three,
     padding: Spacing.three,
-    borderRadius: Radius.md,
-    borderWidth: 1,
-    borderColor: Palette.border,
-    backgroundColor: Palette.surface,
   },
   avatar: {
     width: 44,

@@ -28,10 +28,47 @@ const resources = {
         login: "Log in",
       },
 
+      subscribe: {
+        title: "Choose your plan",
+        subtitle: "Pick the right guide for your class and start learning.",
+        manageTitle: "Your subscription",
+        manageSubtitle: "Change your plan or the classes you're subscribed to.",
+        perMonth: "/mo",
+        mostPopular: "Most popular",
+        tierBasic: "Basic",
+        tierPremium: "Premium",
+        selectGrade: "Select your class",
+        selectGrades: "Select your classes",
+        classTag: "Class",
+        gradeShort: "Class {{grade}}",
+        basicNote: "Basic covers one class. Upgrade to Premium to add more.",
+        premiumNote: "Add every class you need — perfect for families.",
+        totalLabel: "Total",
+        oneClass: "1 class",
+        classCount: "{{count}} classes",
+        continue: "Continue",
+        save: "Save changes",
+        features: {
+          oneGrade: "1 class of your choice",
+          multiGrade: "Add multiple classes",
+          voiceTutor: "Unlimited voice tutor",
+          coreLessons: "Core lessons",
+          allLessons: "All lessons & scenarios",
+          progress: "Progress tracking",
+          priority: "Priority new content",
+        },
+        upgradeTitle: "Premium feature",
+        upgradeBody:
+          "Adding more than one class is a Premium feature. Switch to Premium to continue.",
+        upgradeCta: "Switch to Premium",
+        cancel: "Cancel",
+      },
+
       onboarding: {
         title: "Let's get to know you!",
         namePlaceholder: "Your name",
         gradeLabel: "Which class are you in? (optional)",
+        boardLabel: "Which board?",
         levelLabel: "How comfortable are you with English?",
         levelBeginner: "Just starting",
         levelIntermediate: "I can manage",
@@ -67,6 +104,31 @@ const resources = {
         empty: "Finish a lesson or a chat to start tracking your progress.",
         lastActive: "Last active",
         never: "Not yet",
+
+        // Syllabus coverage
+        syllabusTitle: "Syllabus coverage",
+        classLabel: "Class {{grade}}",
+        topicsProgress: "{{done}} of {{total}} topics",
+        noBoardTitle: "Pick your board",
+        noBoardBody: "Choose ICSE or CBSE to see your class syllabus.",
+        chooseBoard: "Choose board",
+        noClassBody: "Subscribe to a class to track your syllabus.",
+        practice: "Practice",
+        done: "Done",
+
+        // Activity calendar
+        activityTitle: "Activity",
+        currentStreak: "Current streak",
+        bestStreak: "Best streak",
+        daysThisWeek: "Days this week",
+        days: "days",
+        less: "Less",
+        more: "More",
+      },
+
+      board: {
+        icse: "ICSE",
+        cbse: "CBSE",
       },
 
       lessons: {
@@ -95,11 +157,21 @@ const resources = {
 
       settings: {
         title: "Settings",
+        subscription: "Subscription",
+        planBasic: "Basic plan",
+        planPremium: "Premium plan",
+        classesLabel: "Classes",
+        managePlan: "Manage plan & classes",
+        choosePlan: "Choose a plan",
+        noPlan: "No active plan",
         language: "Language",
         comingSoon: "More languages coming soon",
         clearHistory: "Clear conversation",
         clearHistoryDone: "Your conversation has been cleared.",
         editProfile: "Edit profile",
+        logout: "Log out",
+        logoutConfirm: "You'll need to sign in again to continue. Your profile and plan are kept.",
+        confirmLogout: "Log out",
         reset: "Reset everything",
         resetConfirm:
           "This erases your profile, progress and conversations on this device. This can't be undone.",

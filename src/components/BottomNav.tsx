@@ -1,12 +1,14 @@
+import { BlurView } from "expo-blur";
 import { useRouter, type Href } from "expo-router";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Platform, Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 
 import { AppIcon, type IconName } from "@/components/AppIcon";
+import { useGlassTarget } from "@/components/Glass";
 import { ThemedText } from "@/components/themed-text";
 import { Spacing } from "@/constants/theme";
-import { Palette } from "@/lib/ui";
+import { Glass, Palette } from "@/lib/ui";
 
 type TabKey = "home" | "tracking" | "settings";
 
@@ -22,9 +24,18 @@ export function BottomNav({ active }: { active: TabKey }) {
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const target = useGlassTarget();
 
   return (
     <View style={[styles.bar, { paddingBottom: Math.max(insets.bottom, Spacing.two) }]}>
+      <BlurView
+        intensity={Glass.intensityNav}
+        tint="light"
+        blurMethod="dimezisBlurView"
+        blurTarget={Platform.OS === "android" ? (target ?? undefined) : undefined}
+        style={StyleSheet.absoluteFill}
+      />
+      <View style={[StyleSheet.absoluteFill, styles.barTint]} />
       {TABS.map((tab) => {
         const isActive = tab.key === active;
         const color = isActive ? Palette.primary : Palette.inkMuted;
@@ -54,11 +65,15 @@ export function BottomNav({ active }: { active: TabKey }) {
 const styles = StyleSheet.create({
   bar: {
     flexDirection: "row",
-    backgroundColor: Palette.surface,
-    borderTopWidth: 1,
-    borderTopColor: Palette.border,
+    backgroundColor: "transparent",
     paddingTop: Spacing.two,
     paddingHorizontal: Spacing.two,
+    overflow: "hidden",
+  },
+  barTint: {
+    backgroundColor: Glass.tintStrong,
+    borderTopWidth: 1,
+    borderTopColor: Glass.border,
   },
   item: { flex: 1, alignItems: "center", gap: 3 },
   iconWrap: {

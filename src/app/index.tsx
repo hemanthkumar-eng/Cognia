@@ -7,6 +7,7 @@ import { Brand } from "@/lib/ui";
 export default function Index() {
   const hydrated = useAppStore((s) => s.hydrated);
   const authed = useAppStore((s) => s.authed);
+  const subscription = useAppStore((s) => s.subscription);
   const onboarded = useAppStore((s) => s.onboarded);
 
   if (!hydrated) {
@@ -17,10 +18,13 @@ export default function Index() {
     );
   }
 
-  // New user → sign up → profile setup → home. (Already-onboarded users from
-  // before auth existed skip straight to home.)
-  if (!authed && !onboarded) return <Redirect href="/signup" />;
-  return <Redirect href={onboarded ? "/home" : "/onboarding"} />;
+  // Auth gates everything: a signed-out user always lands on sign up. Once
+  // authed, walk the funnel — choose plan → profile setup → home — resuming at
+  // whatever step is still incomplete (so re-login skips straight to home).
+  if (!authed) return <Redirect href="/signup" />;
+  if (!subscription) return <Redirect href="/subscribe" />;
+  if (!onboarded) return <Redirect href="/onboarding" />;
+  return <Redirect href="/home" />;
 }
 
 const styles = StyleSheet.create({

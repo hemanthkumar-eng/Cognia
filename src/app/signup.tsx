@@ -14,10 +14,11 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 
+import { GlassBackground, GlassView } from "@/components/Glass";
 import { ThemedText } from "@/components/themed-text";
 import { Spacing } from "@/constants/theme";
 import { useAppStore } from "@/lib/store";
-import { Palette, Radius } from "@/lib/ui";
+import { Glass, Palette, Radius } from "@/lib/ui";
 
 type FocusTarget = null | "email" | "password";
 
@@ -32,16 +33,19 @@ export default function SignUp() {
   const [focused, setFocused] = useState<FocusTarget>(null);
 
   // Placeholder auth. Real Supabase email/OAuth calls land here later; for now
-  // every path just marks the user authed and continues to profile setup.
+  // every path marks the user authed and hands off to the index funnel, which
+  // resumes at the first incomplete step (plan → profile, or straight to home
+  // for a returning user).
   function proceed() {
     completeAuth();
-    router.replace("/onboarding");
+    router.replace("/");
   }
 
   const canSubmit = email.trim().length > 3 && password.length >= 8;
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
+    <GlassBackground>
+      <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
       <StatusBar style="dark" />
       <KeyboardAvoidingView
         style={styles.flex}
@@ -182,7 +186,8 @@ export default function SignUp() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+      </SafeAreaView>
+    </GlassBackground>
   );
 }
 
@@ -210,17 +215,21 @@ function SocialButton({
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={label}
-      style={({ pressed }) => [styles.socialBtn, pressed && styles.pressed]}
+      style={({ pressed }) => pressed && styles.pressed}
     >
-      {/* Icon is absolutely positioned so the label stays optically centred. */}
-      <View style={styles.socialMark}>{mark}</View>
-      <ThemedText style={styles.socialText}>{label}</ThemedText>
+      <GlassView radius={Radius.md - 2} tint={Glass.tintStrong}>
+        <View style={styles.socialBtn}>
+          {/* Icon is absolutely positioned so the label stays optically centred. */}
+          <View style={styles.socialMark}>{mark}</View>
+          <ThemedText style={styles.socialText}>{label}</ThemedText>
+        </View>
+      </GlassView>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Palette.surface },
+  safe: { flex: 1, backgroundColor: "transparent" },
   flex: { flex: 1 },
   content: {
     flexGrow: 1,
@@ -276,10 +285,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     height: 54,
-    borderRadius: Radius.md - 2,
-    borderWidth: 1,
-    borderColor: Palette.border,
-    backgroundColor: Palette.surface,
   },
   socialMark: { position: "absolute", left: Spacing.four, width: 22, alignItems: "center" },
   socialText: { color: Palette.ink, fontSize: 15, fontWeight: "600" },
@@ -303,15 +308,15 @@ const styles = StyleSheet.create({
     height: 54,
     borderRadius: Radius.md - 2,
     borderWidth: 1.5,
-    borderColor: Palette.border,
-    backgroundColor: Palette.surfaceMuted,
+    borderColor: Glass.border,
+    backgroundColor: Glass.tint,
     paddingHorizontal: Spacing.three,
     fontSize: 16,
     color: Palette.ink,
   },
   inputFocused: {
     borderColor: Palette.primary,
-    backgroundColor: Palette.surface,
+    backgroundColor: Glass.tintStrong,
     shadowColor: Palette.primary,
     shadowOpacity: 0.14,
     shadowRadius: 8,
