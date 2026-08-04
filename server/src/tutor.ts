@@ -1,7 +1,7 @@
 import { buildSystemPrompt } from "./prompt.js";
 import type { Scenario } from "./scenarios.js";
 import { chat, textToSpeech, toMessages } from "./sarvam.js";
-import type { ChatTurn, LanguageCode, Profile } from "./types.js";
+import type { ChatTurn, LanguageCode, Profile, TopicRef } from "./types.js";
 
 // Conversation history keyed by sessionId. Shared by the REST route
 // (/api/converse) and the streaming WebSocket bridge (/api/stream) so a student
@@ -17,6 +17,8 @@ interface TutorTurnArgs {
   sessionId: string;
   profile: Profile;
   scenario?: Scenario;
+  /** Syllabus topic being practised — themes the conversation (see prompt.ts). */
+  topic?: TopicRef;
   /** What the student said (from STT or the text fallback). Ignored when opening. */
   userText?: string;
   /** Ask the tutor to speak first — no student input this turn. */
@@ -38,6 +40,7 @@ export async function runTutorTurn({
   sessionId,
   profile,
   scenario,
+  topic,
   userText,
   opening,
 }: TutorTurnArgs): Promise<TutorTurn> {
@@ -46,8 +49,13 @@ export async function runTutorTurn({
 
   if (opening) {
     // Seed a hidden kickoff so the tutor opens the conversation on-topic.
+    const topicKickoff = topic
+      ? `Greet the student warmly by name and tell them that today you will talk together about "${topic.title}". ` +
+        `Ask one simple, open question to find out what they already know about it.`
+      : undefined;
     const kickoff =
       scenario?.kickoff ??
+      topicKickoff ??
       "Greet the student warmly by name and ask what they would like to talk about today.";
     history.push({ role: "user", content: `(${kickoff})` });
   } else {
@@ -56,7 +64,7 @@ export async function runTutorTurn({
     history.push({ role: "user", content: said });
   }
 
-  const messages = toMessages(buildSystemPrompt(profile, scenario), history);
+  const messages = toMessages(buildSystemPrompt(profile, scenario, topic), history);
   const replyText = await chat(messages);
   history.push({ role: "assistant", content: replyText });
   sessions.set(sessionId, history);

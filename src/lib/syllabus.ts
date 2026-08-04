@@ -169,3 +169,16 @@ export function getTopics(board: Board, classNum: number): Topic[] {
 export function topicCount(board: Board, classNum: number): number {
   return (SEEDS[classNum] ?? []).length;
 }
+
+// Topic ids encode their own board + class ("cbse-c5-water-cycle"), so a screen
+// holding only an id (e.g. Conversation, which receives one as a route param)
+// can recover the full topic without also threading board/class through.
+const TOPIC_ID = /^(icse|cbse)-c(\d+)-/;
+
+export function getTopicById(id: string): Topic | undefined {
+  const match = TOPIC_ID.exec(id);
+  if (!match) return undefined;
+  const board = match[1] as Board;
+  const classNum = Number(match[2]);
+  return getTopics(board, classNum).find((t) => t.id === id);
+}

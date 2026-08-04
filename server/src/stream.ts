@@ -3,7 +3,7 @@ import { WebSocketServer, type WebSocket as WsSocket } from "ws";
 import { getScenario, type Scenario } from "./scenarios.js";
 import { openSarvamStt, type SarvamSttSession } from "./sarvam-stream.js";
 import { runTutorTurn } from "./tutor.js";
-import type { LanguageCode, Profile } from "./types.js";
+import type { LanguageCode, Profile, TopicRef } from "./types.js";
 
 // Real-time voice bridge. The device streams mic PCM up this socket; we relay it
 // to Sarvam's STT WebSocket, push live transcript segments back down, and — when
@@ -22,7 +22,14 @@ const STREAM_PATH = "/api/stream";
 const FLUSH_GRACE_MS = 450;
 
 type ClientMessage =
-  | { type: "init"; sessionId: string; profile: Profile; scenarioId?: string; opening?: boolean }
+  | {
+      type: "init";
+      sessionId: string;
+      profile: Profile;
+      scenarioId?: string;
+      topic?: TopicRef;
+      opening?: boolean;
+    }
   | { type: "audio"; data: string }
   | { type: "commit" }
   | { type: "bye" };
@@ -38,6 +45,7 @@ class Bridge {
     sessionId: string;
     profile: Profile;
     scenario?: Scenario;
+    topic?: TopicRef;
     language: LanguageCode;
   } | null = null;
 
@@ -96,6 +104,7 @@ class Bridge {
       sessionId: msg.sessionId,
       profile: msg.profile,
       scenario: getScenario(msg.scenarioId),
+      topic: msg.topic,
       language: msg.profile.language || "en-IN",
     };
     this.send({ type: "ready" });
@@ -107,6 +116,7 @@ class Bridge {
         sessionId: this.ctx.sessionId,
         profile: this.ctx.profile,
         scenario: this.ctx.scenario,
+        topic: this.ctx.topic,
         opening: true,
       });
       this.send({ type: "reply", text: turn.replyText });
@@ -183,6 +193,7 @@ class Bridge {
         sessionId: this.ctx.sessionId,
         profile: this.ctx.profile,
         scenario: this.ctx.scenario,
+        topic: this.ctx.topic,
         userText: said,
       });
       this.send({ type: "reply", text: turn.replyText });

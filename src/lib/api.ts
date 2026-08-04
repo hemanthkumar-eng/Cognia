@@ -1,5 +1,5 @@
 import { API_URL } from "./config";
-import type { ConverseResponse, Profile, Scenario } from "./types";
+import type { ConverseResponse, Profile, Scenario, TopicRef } from "./types";
 
 // Talks to our backend (never to Sarvam directly — the key stays server-side).
 
@@ -24,6 +24,7 @@ interface ConverseArgs {
   audioUri?: string; // local file:// from the recorder
   text?: string; // text fallback (noisy / low bandwidth)
   scenarioId?: string; // active lesson, if any
+  topic?: TopicRef; // syllabus topic being practised, if any
   opening?: boolean; // ask the tutor to speak first (no student input)
 }
 
@@ -33,12 +34,14 @@ export async function converse({
   audioUri,
   text,
   scenarioId,
+  topic,
   opening,
 }: ConverseArgs): Promise<ConverseResponse> {
   const form = new FormData();
   form.append("sessionId", sessionId);
   form.append("profile", JSON.stringify(profile));
   if (scenarioId) form.append("scenarioId", scenarioId);
+  if (topic) form.append("topic", JSON.stringify(topic));
 
   if (opening) {
     form.append("opening", "true");

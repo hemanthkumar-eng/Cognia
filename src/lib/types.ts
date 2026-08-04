@@ -17,6 +17,15 @@ export type LanguageCode =
 // Examination board — content is themed on each class's ICSE/CBSE syllabus.
 export type Board = "icse" | "cbse";
 
+// The slice of a syllabus Topic (see lib/syllabus) sent to the server to theme
+// a conversation. Deliberately narrower than Topic — display-only fields stay
+// on the client.
+export interface TopicRef {
+  id: string;
+  title: string;
+  subject: string;
+}
+
 export interface Profile {
   name: string;
   grade?: number;

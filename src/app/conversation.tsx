@@ -23,7 +23,8 @@ import { playBase64Wav, useVoiceRecorder } from "@/lib/audio";
 import { STREAMING_ENABLED } from "@/lib/config";
 import { useStreamingSession, type StreamHandlers } from "@/lib/streaming";
 import { useAppStore } from "@/lib/store";
-import type { MascotState } from "@/lib/types";
+import { getTopicById } from "@/lib/syllabus";
+import type { MascotState, TopicRef } from "@/lib/types";
 import { Brand, Glass, Palette, Radius } from "@/lib/ui";
 
 let idCounter = 0;
@@ -46,8 +47,16 @@ export default function Conversation() {
   }>();
   const scenarioId = typeof params.scenarioId === "string" ? params.scenarioId : undefined;
   const title = typeof params.title === "string" ? params.title : undefined;
-  // A syllabus topic practised from the Progress screen — marked complete on finish.
+  // A syllabus topic practised from the Progress screen. It themes the tutor's
+  // prompt (sent on every turn) and is marked complete on finish.
   const topicId = typeof params.topicId === "string" ? params.topicId : undefined;
+  const topic = useMemo<TopicRef | undefined>(() => {
+    if (!topicId) return undefined;
+    const found = getTopicById(topicId);
+    if (found) return { id: found.id, title: found.title, subject: found.subject };
+    // Unknown id (e.g. a stale deep link) — still theme the chat on its title.
+    return title ? { id: topicId, title, subject: "" } : undefined;
+  }, [topicId, title]);
 
   const messages = useAppStore((s) => s.messages);
   const addMessage = useAppStore((s) => s.addMessage);
@@ -84,7 +93,7 @@ export default function Conversation() {
     // Read sessionId/profile fresh so a reset right before an opening turn is honoured.
     mutationFn: (input: TurnInput) => {
       const { sessionId, profile } = useAppStore.getState();
-      return converse({ sessionId, profile, scenarioId, ...input });
+      return converse({ sessionId, profile, scenarioId, topic, ...input });
     },
     onMutate: () => {
       setError(null);
@@ -146,7 +155,7 @@ export default function Conversation() {
     if (STREAMING_ENABLED) {
       if (opening) expectingOpeningRef.current = true;
       const { sessionId, profile } = useAppStore.getState();
-      stream.connect({ sessionId, profile, scenarioId, opening }).catch((e) => {
+      stream.connect({ sessionId, profile, scenarioId, topic, opening }).catch((e) => {
         setError(e instanceof Error ? e.message : "Could not connect to the tutor.");
       });
     } else if (opening) {

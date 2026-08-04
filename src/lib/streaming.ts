@@ -2,7 +2,7 @@ import { useAudioRecorder } from "@siteed/audio-studio";
 import { requestRecordingPermissionsAsync } from "expo-audio";
 import { useCallback, useEffect, useRef } from "react";
 import { WS_URL } from "./config";
-import type { MascotState, Profile } from "./types";
+import type { MascotState, Profile, TopicRef } from "./types";
 
 // Client for the real-time voice bridge (server /api/stream).
 //
@@ -28,6 +28,7 @@ export interface StreamInit {
   sessionId: string;
   profile: Profile;
   scenarioId?: string;
+  topic?: TopicRef; // syllabus topic being practised — themes the conversation
   opening?: boolean;
 }
 

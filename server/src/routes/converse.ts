@@ -2,7 +2,22 @@ import { Hono } from "hono";
 import { getScenario } from "../scenarios.js";
 import { speechToText } from "../sarvam.js";
 import { clearSession, runTutorTurn } from "../tutor.js";
-import type { ConverseResponse, Profile } from "../types.js";
+import type { ConverseResponse, Profile, TopicRef } from "../types.js";
+
+// `topic` arrives as a JSON blob on the form. Bad JSON just means "no topic" —
+// a themed conversation degrades to free chat rather than failing the turn.
+function parseTopic(raw: string): TopicRef | undefined {
+  if (!raw) return undefined;
+  try {
+    const t = JSON.parse(raw) as Partial<TopicRef>;
+    if (!t || typeof t.id !== "string" || typeof t.title !== "string") {
+      return undefined;
+    }
+    return { id: t.id, title: t.title, subject: t.subject ?? "" };
+  } catch {
+    return undefined;
+  }
+}
 
 export const converse = new Hono();
 
@@ -14,6 +29,7 @@ export const converse = new Hono();
  *   - text:    optional — text fallback instead of audio (noisy/low-bandwidth)
  *   - opening: optional "true" — tutor speaks first, no student input
  *   - scenarioId: optional active lesson
+ *   - topic:   optional JSON TopicRef — a syllabus topic to theme the chat on
  *
  * Returns ConverseResponse: { userText, replyText, audioBase64, mascotState }.
  *
@@ -40,6 +56,7 @@ converse.post("/", async (c) => {
   }
   const language = profile.language || "en-IN";
   const scenario = getScenario(String(body.get("scenarioId") || "") || undefined);
+  const topic = parseTopic(String(body.get("topic") || ""));
   const opening = String(body.get("opening") || "") === "true";
 
   try {
@@ -60,7 +77,14 @@ converse.post("/", async (c) => {
       }
     }
 
-    const turn = await runTutorTurn({ sessionId, profile, scenario, userText, opening });
+    const turn = await runTutorTurn({
+      sessionId,
+      profile,
+      scenario,
+      topic,
+      userText,
+      opening,
+    });
 
     const payload: ConverseResponse = {
       userText: turn.userText,
