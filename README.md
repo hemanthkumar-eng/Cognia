@@ -1,190 +1,188 @@
 # Cognia
 
-An India-first, **English-speaking practice buddy** for students. A Duolingo-style
-mascot talks with the student by **voice**: the app speaks (TTS), listens to the
-student (STT), and shows everything as on-screen **captions**. It personalizes by
-the student's class, ability level, and interests. English-first, architected to
-scale to Hindi, Tamil, Telugu and more.
+A voice English-practice app for students: an Expo / React Native client talks to a small Node proxy that chains Sarvam AI speech-to-text, chat completion and text-to-speech into one tutor turn.
 
-Powered by **Sarvam AI** (Saaras STT · Sarvam-M LLM · Bulbul TTS) — Indian-language
-tuned, INR-billed, India data residency.
+## Overview
 
-> **Status:** Phase 0 scaffold + **Phase 1** (guided lessons, scenario-aware tutor,
-> streaks/XP). See the build roadmap at the bottom.
+The student holds a mic button, speaks, and gets a spoken reply plus an on-screen transcript. The tutor's behaviour is set by a system prompt built from a locally stored profile (name, optional class, ability level, interests) and an optional guided lesson scenario.
 
----
+The client never calls Sarvam directly. Sarvam authenticates with an API key header (including on the WebSocket upgrade request for streaming STT), so the key has to live on a server. `server/` is that proxy: it holds the key, owns the conversation history, and exposes one REST turn endpoint and one WebSocket endpoint.
+
+There are two voice transports that share the same turn logic:
+
+- **Turn-based (default):** record a file, upload it as multipart, server runs STT, LLM, TTS in sequence, returns JSON with base64 WAV.
+- **Streaming (behind `EXPO_PUBLIC_STREAMING=1`):** the device streams 16 kHz mono PCM16 chunks over a WebSocket, the server relays them to Sarvam's streaming STT socket and pushes transcript segments back as live captions, then runs the same LLM + TTS step on commit. This path is written against Sarvam's documented protocol but has not been validated against a live key (see Status).
 
 ## Architecture
 
-```
-[Expo app]  --audio/text-->  [server (Hono)]  -->  Sarvam STT  (speech -> text)
-                                              -->  Sarvam LLM  (tutor reply)
-                                              -->  Sarvam TTS  (text -> speech)
-[Expo app]  <--text+audio--  [server]
+```mermaid
+flowchart LR
+  subgraph App["Expo app (src/)"]
+    UI["conversation.tsx"]
+    API["lib/api.ts (fetch)"]
+    STR["lib/streaming.ts (WebSocket)"]
+    STORE["lib/store.ts (zustand + AsyncStorage)"]
+  end
+  subgraph Server["server/ (Hono on @hono/node-server)"]
+    REST["routes/converse.ts"]
+    WS["stream.ts (ws Bridge)"]
+    TUTOR["tutor.ts runTutorTurn + sessions Map"]
+    PROMPT["prompt.ts + scenarios.ts"]
+    SARVAM["sarvam.ts (HTTP client)"]
+    SSTT["sarvam-stream.ts (WS client)"]
+  end
+  subgraph Sarvam["Sarvam AI"]
+    STT["POST /speech-to-text"]
+    LLM["POST /v1/chat/completions"]
+    TTS["POST /text-to-speech"]
+    STTWS["wss /speech-to-text/ws"]
+  end
+  UI --> API
+  UI --> STR
+  UI --> STORE
+  API -->|"multipart POST /api/converse"| REST
+  STR <-->|"JSON frames /api/stream"| WS
+  REST --> SARVAM
+  REST --> TUTOR
+  WS --> SSTT
+  WS --> TUTOR
+  TUTOR --> PROMPT
+  TUTOR --> SARVAM
+  SARVAM --> STT
+  SARVAM --> LLM
+  SARVAM --> TTS
+  SSTT <--> STTWS
 ```
 
-The **Sarvam API key never ships in the app** — only the backend holds it.
+Both transports end in `runTutorTurn()` (`server/src/tutor.ts`): append the student text to the session history, build the system prompt, call the LLM, append the reply, call TTS, return text plus base64 WAV. LLM and TTS are plain request/response calls on both paths; only STT is streamed.
+
+## Tech Stack
+
+| Layer | Used in code |
+| --- | --- |
+| Client | Expo SDK 56, React Native 0.85, React 19, TypeScript, expo-router (stack navigation) |
+| Client state | zustand with `persist` on AsyncStorage; @tanstack/react-query for the scenario query and the turn mutation |
+| Client audio | expo-audio (file recording, playback), @siteed/audio-studio (PCM chunk capture for streaming), expo-file-system (writes reply WAV to cache) |
+| i18n | i18next + react-i18next, locale from expo-localization; only an `en` resource block exists |
+| Server | Node, TypeScript run through `tsx`, Hono + @hono/node-server, `ws` (both as WebSocket server and as client to Sarvam) |
+| External | Sarvam AI: `saaras:v2.5` batch STT, `saaras:v3` streaming STT, `sarvam-m` chat, `bulbul:v2` TTS (all overridable by env) |
+
+## Key Engineering Decisions
+
+- **One turn function, two transports.** `routes/converse.ts` and `stream.ts` only differ in how they obtain `userText`; both call `runTutorTurn()` and share the `sessions` map in `tutor.ts`. The typed-text fallback in the app always uses the REST route, and still lands in the same history as streamed turns.
+- **One upstream STT socket per utterance.** `Bridge` in `stream.ts` opens the Sarvam socket lazily on the first audio chunk, buffers chunks in `pending` until it is open, and closes it on commit. This avoids holding an idle upstream connection between turns, at the cost of a connection setup per utterance.
+- **Commit is a flush plus a fixed wait.** On `commit` the bridge awaits any in-flight socket open, sends Sarvam a `flush`, then sleeps `FLUSH_GRACE_MS` (450 ms) before reading the accumulated transcript. There is no explicit "final segment" acknowledgement, so a late segment is dropped. A `committing` flag ignores duplicate commits.
+- **Server owns lesson content.** `scenarios.ts` is the single source for the seven scenarios; `GET /api/scenarios` returns only card fields, while `goal`, `guidance` and the hidden `kickoff` instruction stay server-side and are injected into the prompt by `prompt.ts`.
+- **Bounded context, not bounded storage.** `toMessages()` in `sarvam.ts` sends only the last `MAX_HISTORY_TURNS` history entries (default 12) and `chat()` caps output at `MAX_LLM_OUTPUT_TOKENS` (default 300). The stored history itself is never trimmed or evicted.
+- **Upstream field names isolated.** All Sarvam request/response shapes live in `sarvam.ts` and `sarvam-stream.ts`; upstream errors are rethrown as `Sarvam STT|LLM|TTS <status>: <first 300 chars of body>`.
+
+## API
+
+### HTTP
+
+| Method | Path | Request | Response |
+| --- | --- | --- | --- |
+| GET | `/api/health` | none | `{ ok, service, time }` |
+| GET | `/api/scenarios` | none | `[{ id, emoji, title, blurb, levels }]` |
+| POST | `/api/converse` | multipart: `sessionId`, `profile` (JSON string), and one of `audio` (file), `text`, or `opening=true`; optional `scenarioId` | `{ userText, replyText, audioBase64, mascotState }` |
+| DELETE | `/api/converse/:sessionId` | none | `{ ok: true }` |
+
+`POST /api/converse` errors are `{ error }` with status 400 (not multipart, missing `sessionId`, invalid `profile` JSON, neither audio nor text), 422 (empty transcript) or 502 (any failure in STT, LLM or TTS).
+
+### WebSocket `/api/stream` (JSON text frames)
+
+| Direction | `type` | Fields | Meaning |
+| --- | --- | --- | --- |
+| client to server | `init` | `sessionId`, `profile`, `scenarioId?`, `opening?` | Bind the socket to a session; with `opening` the tutor speaks first |
+| client to server | `audio` | `data` (base64 PCM16, 16 kHz mono) | One mic chunk (client emits every 100 ms) |
+| client to server | `commit` | none | Mic released; finalize STT and run the turn |
+| client to server | `bye` | none | Tear down |
+| server to client | `ready` | none | `init` accepted |
+| server to client | `partial` | `text` | Accumulated transcript so far |
+| server to client | `speechEnd` | none | Sarvam VAD end-of-speech (the app currently ignores it) |
+| server to client | `final` | `text` | Committed student utterance |
+| server to client | `reply` | `text` | Tutor reply text |
+| server to client | `audio` | `data` (base64 WAV), `mime` | Tutor reply audio, sent as one frame |
+| server to client | `state` | `state`: `listening`, `thinking`, `speaking`, `idle` | Drives the mascot |
+| server to client | `error` | `message` | Followed by `state: idle` |
+
+### State
+
+There is no database. Server: `Map<sessionId, ChatTurn[]>` in process memory. Client: `profile`, `authed`, `onboarded`, `sessionId` and `progress` (streak, XP, completed scenario ids) persisted to AsyncStorage; transcript messages are in memory only. `Profile` and `ConverseResponse` are duplicated by hand in `server/src/types.ts` and `src/lib/types.ts`.
+
+## Project Structure
 
 ```
 src/
-  app/            expo-router screens: index, onboarding, home, lessons, conversation, settings
-  components/     Mascot, Transcript, MicButton (+ template themed-text/view)
-  lib/            api, audio, store (zustand+persist), i18n, config, types, ui
+  app/            expo-router screens: index, signup, onboarding, home, lessons, conversation, settings
+  components/     Mascot, MicButton, Transcript, themed-text, themed-view
+  lib/
+    api.ts        REST client for the proxy
+    streaming.ts  WebSocket client + PCM capture hook
+    audio.ts      file recorder and base64 WAV playback
+    store.ts      zustand store (profile, session id, progress)
+    config.ts     API_URL / WS_URL / STREAMING_ENABLED from env
+    i18n.ts       UI strings
 server/
-  src/            index.ts, routes/converse.ts, sarvam.ts, prompt.ts, scenarios.ts, types.ts
+  src/
+    index.ts          Hono app, CORS, health + scenarios routes, attaches the WS server
+    routes/converse.ts  turn-based endpoint
+    stream.ts         per-connection Bridge for /api/stream
+    sarvam.ts         HTTP client: STT, chat, TTS
+    sarvam-stream.ts  WebSocket client for streaming STT
+    tutor.ts          runTutorTurn and the in-memory session map
+    prompt.ts         system prompt builder
+    scenarios.ts      lesson catalogue
 ```
 
-Backend endpoints: `GET /api/health`, `GET /api/scenarios` (lesson catalogue),
-`POST /api/converse` (audio/text/opening turn, optional `scenarioId`),
-`DELETE /api/converse/:sessionId`.
+## Running Locally
 
----
+Requires Node 20 or later (the server relies on global `fetch`, `FormData`, `Blob` and `File`) and a Sarvam AI API key. The app uses native audio modules, so it needs a development build rather than Expo Go.
 
-## Prerequisites
-
-- Node 20+ and npm
-- A **Sarvam AI** API key — https://dashboard.sarvam.ai
-- For the app: the **Expo Go** app won't work (we use native audio modules).
-  Use a **development build** on a real device or an emulator/simulator.
-
----
-
-## 1. Run the backend
+Server:
 
 ```bash
 cd server
-cp .env.example .env          # then paste your SARVAM_API_KEY into .env
 npm install
-npm run dev                   # http://localhost:3000
+cp .env.example .env        # set SARVAM_API_KEY
+set -a; . ./.env; set +a    # the npm scripts do not load .env themselves
+npm run dev                 # tsx watch src/index.ts, listens on PORT (default 3000)
 ```
 
-Check it:
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `SARVAM_API_KEY` | none (required) | Sarvam key; without it turn and stream calls fail |
+| `PORT` | `3000` | HTTP and WebSocket port |
+| `SARVAM_STT_MODEL` / `SARVAM_TTS_MODEL` / `SARVAM_LLM_MODEL` | `saaras:v2.5` / `bulbul:v2` / `sarvam-m` | Model ids |
+| `SARVAM_STT_STREAM_MODEL` | `saaras:v3` | Streaming STT model |
+| `SARVAM_STT_AUDIO_ENCODING` | `audio/wav` | `audio.encoding` value sent with each streamed chunk |
+| `SARVAM_TTS_SPEAKER` | `anushka` | TTS voice |
+| `MAX_LLM_OUTPUT_TOKENS` / `MAX_HISTORY_TURNS` | `300` / `12` | Output cap and history window |
+
+App (from the repository root):
 
 ```bash
-curl http://localhost:3000/api/health      # -> {"ok":true,...}
-```
-
-Cost guardrails live in `.env` (`MAX_LLM_OUTPUT_TOKENS`, `MAX_HISTORY_TURNS`).
-
-## 2. Run the app
-
-```bash
-# from the project root
 npm install
-
-# point the app at your backend (only needed on a physical device)
-cp .env.example .env          # set EXPO_PUBLIC_API_URL to your computer's LAN IP
-
-# build & run a dev build (installs the native audio module)
-npx expo run:android          # or: npx expo run:ios
+cp .env.example .env        # EXPO_PUBLIC_API_URL, EXPO_PUBLIC_STREAMING
+npm run android             # expo run:android   (or: npm run ios)
 ```
 
-> `npx expo start` alone is **not** enough on a physical device because
-> `expo-audio` needs native code. Use `expo run:*` (or `eas build --profile development`).
+`EXPO_PUBLIC_API_URL` is only needed on a physical device (use the host's LAN address). Without it, `src/lib/config.ts` falls back to `http://10.0.2.2:3000` on Android and `http://localhost:3000` elsewhere. Set `EXPO_PUBLIC_STREAMING=1` to use the WebSocket path.
 
-The app's backend URL is resolved in `src/lib/config.ts`:
-iOS simulator → `localhost`, Android emulator → `10.0.2.2`, physical device →
-`EXPO_PUBLIC_API_URL`.
+## Testing
 
----
+No automated tests yet. Available checks are `npm run lint` (root, `expo lint`) and `npm run typecheck` (in `server/`, `tsc --noEmit`). There is no CI configuration.
 
-## How it works
+## Status and Limitations
 
-- **Onboarding** collects name, class (optional), ability level, and interests →
-  stored locally (Zustand + AsyncStorage).
-- **Conversation**: hold the mic to record → audio goes to `/api/converse` →
-  `STT → LLM → TTS` → the reply plays and both lines appear in the transcript.
-  A **text fallback** is available for noisy / low-bandwidth situations.
-- **Personalization** lives in `server/src/prompt.ts` — level, grade and interests
-  shape the tutor's system prompt (vocabulary, sentence length, themes, gentle
-  correction). Child-safety instructions are baked in.
-- **Lessons** (`server/src/scenarios.ts`) are guided scenarios (Saying Hello, At
-  the Market, Tell a Story…) tagged by ability level. Picking one starts a fresh
-  conversation where the tutor **speaks first** (an "opening" turn) and stays on
-  the lesson goal. A **Finish lesson** button marks it complete.
-- **Progress**: each spoken turn earns XP, finishing a lesson earns a bonus, and a
-  daily **streak** is tracked locally (`src/lib/store.ts`). Shown on Home.
-
----
-
-## Scaling to other languages (already wired)
-
-- UI strings: add a locale block in `src/lib/i18n.ts`.
-- Voice: Sarvam STT (22 langs) / TTS (11 langs) are language-parameterized — set
-  `Profile.language` (e.g. `hi-IN`) and it flows through STT, LLM and TTS.
-
----
-
-## Verify the change
-
-1. `curl localhost:3000/api/health` → `{ "ok": true }`.
-2. With `SARVAM_API_KEY` set, `POST /api/converse` (audio or `text=`) returns
-   `userText`, `replyText`, and a playable `audioBase64`.
-3. In the app: onboard → Conversation → hold mic, say "Hello, how are you?" →
-   transcript shows both lines, mascot cycles listening → thinking → speaking,
-   reply audio plays.
-4. Turn on airplane mode mid-request → graceful error + text fallback still works.
-5. Change ability level beginner → advanced → reply complexity changes.
-
-Typecheck both projects:
-
-```bash
-npx tsc --noEmit            # app
-cd server && npx tsc --noEmit
-```
-
----
-
-## Roadmap
-
-- **Phase 0 (done):** runnable skeleton, push-to-talk voice loop.
-- **Phase 1 (done):** scenario-aware tutor prompts, guided lessons (tutor opens
-  the conversation), streaks/XP/lesson completion.
-- **Phase 2 (in progress):** WebSocket **streaming** voice — live captions +
-  lower-latency replies (see below). Still to come: Supabase auth/profiles/
-  progress; Rive mascot; echo-cancelled barge-in.
-- **Phase 3:** Hindi + regional languages, pronunciation scoring, store release.
-
----
-
-## Real-time streaming voice (Phase 2, behind a flag)
-
-A second voice path streams mic audio live instead of record-then-upload:
-
-```
-[app] --PCM (WebSocket)--> [server /api/stream] --> Sarvam streaming STT
-   ^                                                       |
-   |  live captions + reply text + reply audio  <----------+  (LLM + TTS)
-```
-
-- **On device:** `@siteed/audio-studio` captures 16 kHz mono PCM16 and forwards
-  base64 chunks over a WebSocket to our server (`src/lib/streaming.ts`).
-- **On server:** `server/src/stream.ts` bridges each utterance to Sarvam's STT
-  WebSocket (`server/src/sarvam-stream.ts`), relays live transcript segments back
-  as captions, then runs the **same** `runTutorTurn()` (LLM + TTS) as the REST
-  path — so history stays consistent whether a turn came in by stream, upload, or
-  the text box.
-- **Enable it:** set `EXPO_PUBLIC_STREAMING=1` (app `.env`) and rebuild the dev
-  client (native module — not Expo Go). Off by default; the turn-based path stays
-  the stable default.
-
-**Needs on-device + live-key validation** (built to spec, not yet run against a
-real Sarvam key):
-1. Sarvam streaming STT emits per-utterance (VAD-driven) segments, not word-by-
-   word partials — confirm caption cadence feels live enough. (`sarvam-stream.ts`)
-2. The per-chunk `audio.encoding` value for raw PCM input is unverified; override
-   `SARVAM_STT_AUDIO_ENCODING` if transcripts come back empty/garbled.
-3. **Barge-in** (interrupt the tutor mid-reply) needs acoustic echo cancellation
-   so the mic doesn't hear the tutor's own audio. The current push-to-talk model
-   sidesteps this (mic is closed while the tutor speaks); true full-duplex
-   barge-in is a follow-up (validate `@mykin-ai/expo-audio-stream`'s AEC path or
-   native config on a dev build first).
-4. Streaming **TTS** exists on Sarvam too; this increment streams STT and plays
-   the reply as one batch WAV. Chunked TTS playback is the next latency win.
-
-## Notes & compliance
-
-- Sarvam endpoint shapes in `server/src/sarvam.ts` are the single place to update
-  if Sarvam changes a field or model name (`SARVAM_*` env vars override model ids).
-- Users may be **minors** — before launch, review India's **DPDP Act 2023**
-  (children's data / consent). The app collects only a first name by default.
+- **Streaming path unverified.** `sarvam-stream.ts` marks the per-chunk `encoding` value and the segment cadence as needing confirmation against a live key. Reply audio is one batch WAV on both paths; there is no streamed TTS and no barge-in (push-to-talk only).
+- **No authentication on the server.** CORS is open to all origins, session ids are generated on the client, and any caller can post turns or delete a session. No rate limiting.
+- **Sign-up is a placeholder.** `signup.tsx` collects email and password but every button only sets a local `authed` flag; nothing is sent anywhere.
+- **History is in memory only.** It is lost on restart, never evicted, and tied to a single process. If the LLM call fails on an existing session, the student turn that was already appended stays in history without a reply.
+- **Minimal input validation.** `profile` is parsed but not schema-checked; malformed profiles surface as 502. WebSocket frames that are not valid JSON are silently dropped.
+- **No retries or timeouts** on Sarvam calls, and no reconnect logic on the client WebSocket.
+- **Logging** is `console.log` / `console.error` only.
+- **English only in practice.** Language codes for nine Indian languages are typed and passed through to Sarvam, but the UI ships only English strings, onboarding hardcodes `en-IN`, and the language row in Settings is a static "coming soon" chip.
+- **Mascot is a placeholder** built from emoji and `Animated`; several installed dependencies (for example `lottie-react-native`) and Expo template assets are not referenced by the code.
+- **No deployment artefacts:** no Dockerfile, no build step for the server (it runs through `tsx`).
+- The root `LICENSE` is the unmodified Expo template MIT licence.
